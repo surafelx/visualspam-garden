@@ -37,15 +37,61 @@ export const threads = [
   { id: "ideas", name: "Ideas", color: "#ffe08a", icon: "💡" },
 ];
 
+// The four growth stages a plant moves through. Order matters (index = progress).
+export const STAGES = {
+  seed:        { label: "Seed",        icon: "🌰", verb: "just planted" },
+  sprout:      { label: "Sprouting",   icon: "🌱", verb: "breaking ground" },
+  growing:     { label: "Growing",     icon: "🌿", verb: "taking root" },
+  flourishing: { label: "Flourishing", icon: "🌸", verb: "in full bloom" },
+};
+export const STAGE_ORDER = ["seed", "sprout", "growing", "flourishing"];
+
+// how much tending (waters/notes) grows a plant to its next stage
+export const GROWTH_PER_STAGE = 4;
+// a plant that hasn't been tended in this many days is asking to be watered
+export const WATER_AFTER_DAYS = 4;
+
+const daysAgo = (n) => new Date(Date.now() - n * 864e5).toISOString();
+
+export function timeAgo(ts) {
+  const d = (Date.now() - new Date(ts).getTime()) / 864e5;
+  if (d < 1) return "today";
+  if (d < 2) return "yesterday";
+  if (d < 7) return `${Math.floor(d)} days ago`;
+  if (d < 14) return "1 week ago";
+  if (d < 30) return `${Math.floor(d / 7)} weeks ago`;
+  const m = Math.floor(d / 30);
+  return `${m} month${m > 1 ? "s" : ""} ago`;
+}
+export function needsWater(ts) {
+  return (Date.now() - new Date(ts).getTime()) / 864e5 >= WATER_AFTER_DAYS;
+}
+
 // Regions placed in the garden. x/y are percentages within the garden canvas.
+// `stage` drives the sprite; `growth` is progress (0..GROWTH_PER_STAGE) toward
+// the next stage; `lastTs` drives "needs water"; `logs` is your tending history.
 export const regions = [
-  { id: "studio", label: "Studio", sub: "Greenhouse", thread: "technology", icon: "🪴", x: 70, y: 24, kind: "greenhouse" },
-  { id: "philosophy", label: "Philosophy", sub: "Grove", thread: "philosophy", icon: "🌳", x: 30, y: 26, kind: "grove" },
-  { id: "business", label: "Business", sub: "Orchard", thread: "business", icon: "🍎", x: 22, y: 46, kind: "orchard" },
-  { id: "health", label: "Health", sub: "Herb Garden", thread: "health", icon: "🌱", x: 74, y: 47, kind: "herbs" },
-  { id: "rest", label: "Rest", sub: "Pond", thread: "nature", icon: "🌙", x: 26, y: 70, kind: "pond" },
-  { id: "relationships", label: "Relationships", sub: "Meadow", thread: "relationships", icon: "👥", x: 50, y: 74, kind: "meadow" },
-  { id: "ideas", label: "Ideas", sub: "Seedbed", thread: "ideas", icon: "💡", x: 76, y: 70, kind: "seedbed" },
+  { id: "studio", label: "Studio", sub: "Greenhouse", thread: "technology", x: 70, y: 24, kind: "greenhouse",
+    stage: "flourishing", growth: 2, tended: 12, lastTs: daysAgo(2),
+    note: "The AI automation system shipped — new experiments already sprouting under glass.",
+    logs: [{ ts: daysAgo(2), type: "water", text: "reviewed the pipeline" }] },
+  { id: "philosophy", label: "Philosophy", sub: "Grove", thread: "philosophy", x: 30, y: 26, kind: "grove",
+    stage: "growing", growth: 2, tended: 5, lastTs: daysAgo(5),
+    note: "An essay is taking root, fed by three long walks of thought.",
+    logs: [{ ts: daysAgo(5), type: "note", text: "long walk — outline clicked" }] },
+  { id: "business", label: "Business", sub: "Orchard", thread: "business", x: 22, y: 46, kind: "orchard",
+    stage: "sprout", growth: 1, tended: 2, lastTs: daysAgo(7),
+    note: "The first client proposal is planted. Early leaves showing.", logs: [] },
+  { id: "health", label: "Health", sub: "Herb Garden", thread: "health", x: 74, y: 47, kind: "herbs",
+    stage: "flourishing", growth: 3, tended: 20, lastTs: daysAgo(0),
+    note: "Daily movement — the bed is dense, green and fragrant.",
+    logs: [{ ts: daysAgo(0), type: "water", text: "morning run" }] },
+  { id: "rest", label: "Rest", sub: "Pond", thread: "nature", x: 26, y: 70, kind: "pond",
+    stage: "growing", growth: 3, tended: 6, lastTs: daysAgo(3), note: "Quiet is returning: more sleep, slower evenings.", logs: [] },
+  { id: "relationships", label: "Relationships", sub: "Meadow", thread: "relationships", x: 50, y: 74, kind: "meadow",
+    stage: "sprout", growth: 2, tended: 3, lastTs: daysAgo(4), note: "Reconnecting — a few messages sent, the meadow stirring.", logs: [] },
+  { id: "ideas", label: "Ideas", sub: "Seedbed", thread: "ideas", x: 76, y: 70, kind: "seedbed",
+    stage: "seed", growth: 0, tended: 1, lastTs: daysAgo(14), note: "Many seeds resting here, waiting for their season.", logs: [] },
 ];
 
 // Seeds — things quietly growing. stage: seed → sprout → (harvest elsewhere)

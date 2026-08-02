@@ -16,6 +16,22 @@ function hexA(hex, a) {
 }
 
 export const SPRITES = {
+  // early growth stages (universal, tinted by thread)
+  seed: [
+    ".......",
+    "...P...",
+    "..DDD..",
+    ".DDDDD.",
+    "DDDDDDD",
+  ],
+  sprout: [
+    ".......",
+    "..L.L..",
+    "..LLL..",
+    "...S...",
+    "..DDD..",
+    ".DDDDD.",
+  ],
   grove: [
     "..LLLL..",
     ".LLLLLL.",

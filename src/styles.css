@@ -65,15 +65,28 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 /* labels stay hidden — the field is quiet until you reach toward a plant */
 .plant-label {
   position: absolute; top: calc(100% + 4px); left: 50%; transform: translateX(-50%);
-  font-size: 0.7rem; letter-spacing: 0.02em; white-space: nowrap;
-  color: var(--rc); text-shadow: 0 1px 3px #000, 0 0 8px rgba(0, 0, 0, 0.8);
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  font-size: 0.72rem; letter-spacing: 0.02em; white-space: nowrap;
+  color: var(--ink); text-shadow: 0 1px 3px #000, 0 0 8px rgba(0, 0, 0, 0.9);
   opacity: 0; transition: opacity 0.16s ease; pointer-events: none;
 }
+.plant-label em { font-style: normal; color: var(--rc); }
 .plant:hover, .plant.on { transform: translate(-50%, -50%) scale(1.08); z-index: 5; }
 .plant:hover .psprite, .plant.on .psprite {
   filter: drop-shadow(0 0 6px var(--rc)) drop-shadow(0 0 14px color-mix(in srgb, var(--rc) 60%, transparent));
 }
 .plant:hover .plant-label, .plant.on .plant-label { opacity: 1; }
+
+/* flourishing plants glow softly on their own; seeds sit dim & still */
+.plant.stage-flourishing .psprite { filter: drop-shadow(0 0 5px color-mix(in srgb, var(--rc) 45%, transparent)); }
+.plant.stage-flourishing .plant-shadow { width: 52px; }
+.plant.stage-seed .psprite, .plant.stage-sprout .psprite { animation: none; opacity: 0.92; }
+.plant.stage-seed .plant-shadow, .plant.stage-sprout .plant-shadow { width: 26px; height: 6px; }
+
+/* growth pips — 4 dots filled up to the current stage */
+.pips { display: inline-flex; gap: 3px; }
+.pips i { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.16); }
+.pips i.on { background: var(--rc); box-shadow: 0 0 5px var(--rc); }
 
 /* ── minimal check-in ── */
 .checkin {
@@ -88,4 +101,83 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 
 @media (max-width: 640px) {
   .plant .psprite { width: 56px !important; height: auto !important; }
+}
+
+/* ── needs-water cues ── */
+.plant.thirsty .psprite { filter: saturate(0.55) brightness(0.82); }
+.thirst-badge {
+  position: absolute; top: -6px; right: -2px; z-index: 6; font-size: 0.85rem;
+  animation: drip 1.8s ease-in-out infinite; filter: drop-shadow(0 1px 2px #000);
+}
+@keyframes drip { 0%, 100% { transform: translateY(0); opacity: 0.9; } 50% { transform: translateY(2px); opacity: 1; } }
+.thirst-summary {
+  position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+  font-size: 0.74rem; color: #bfe0ff; background: rgba(10, 20, 26, 0.7);
+  border: 1px solid rgba(120, 190, 230, 0.25); border-radius: 8px; padding: 5px 11px;
+  letter-spacing: 0.02em;
+}
+
+/* ── stage legend ── */
+.legend {
+  position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 12px; font-size: 0.68rem; color: rgba(216, 230, 210, 0.4);
+}
+.legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.legend-item b { color: rgba(216, 230, 210, 0.25); }
+
+/* ── description / log panel ── */
+.detail {
+  position: absolute; right: 18px; bottom: 18px; width: 306px; max-width: calc(100vw - 36px);
+  background: rgba(9, 15, 11, 0.94); border: 2px solid var(--rc);
+  border-radius: 10px; padding: 14px; z-index: 10;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 18px 40px -12px rgba(0,0,0,0.8), 0 0 30px -12px var(--rc);
+  image-rendering: auto;
+}
+.detail-close { position: absolute; top: 8px; right: 10px; color: rgba(216,230,210,0.5); font-size: 0.8rem; }
+.detail-close:hover { color: #fff; }
+.detail-head { display: flex; gap: 11px; align-items: center; margin-bottom: 11px; }
+.detail-icon {
+  width: 38px; height: 38px; flex: 0 0 auto; display: grid; place-items: center; font-size: 1.15rem;
+  border-radius: 9px; background: color-mix(in srgb, var(--rc) 20%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rc) 45%, transparent);
+}
+.detail-name { font-size: 0.98rem; font-weight: 600; }
+.detail-name span { color: rgba(216, 230, 210, 0.5); font-weight: 400; }
+.detail-stage { display: flex; align-items: center; gap: 8px; font-size: 0.74rem; color: var(--rc); margin-top: 3px; }
+
+.grow-bar { position: relative; height: 16px; border-radius: 6px; background: rgba(255,255,255,0.06); margin-bottom: 11px; overflow: hidden; }
+.grow-bar i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, var(--rc), color-mix(in srgb, var(--rc) 50%, #fff)); border-radius: 6px; transition: width 0.4s ease; }
+.grow-bar span { position: relative; z-index: 1; display: block; text-align: center; font-size: 0.62rem; line-height: 16px; color: #06120a; font-weight: 600; mix-blend-mode: screen; }
+
+.detail-note { font-size: 0.82rem; line-height: 1.5; color: rgba(216, 230, 210, 0.82); margin-bottom: 10px; }
+.detail-meta { display: flex; flex-direction: column; gap: 3px; font-size: 0.72rem; color: rgba(216, 230, 210, 0.55); margin-bottom: 11px; }
+.detail-meta .thirsty { color: #8fc9ef; }
+
+.detail-actions { margin-bottom: 9px; }
+.btn-water {
+  width: 100%; padding: 9px; border-radius: 8px; font-family: inherit; font-size: 0.82rem; font-weight: 600;
+  color: #062033; background: linear-gradient(180deg, #7fc7ef, #4c9fd0); box-shadow: 0 3px 0 #2f6f96;
+}
+.btn-water:hover { filter: brightness(1.08); }
+.btn-water:active { transform: translateY(2px); box-shadow: 0 1px 0 #2f6f96; }
+
+.log-add { display: flex; gap: 6px; margin-bottom: 10px; }
+.log-add input {
+  flex: 1 1 auto; min-width: 0; padding: 8px 10px; border-radius: 8px; font-family: inherit; font-size: 0.78rem;
+  color: var(--ink); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
+}
+.log-add input::placeholder { color: rgba(216, 230, 210, 0.35); }
+.log-add input:focus { outline: none; border-color: var(--rc); }
+.log-add button { padding: 8px 12px; border-radius: 8px; font-family: inherit; font-size: 0.78rem; font-weight: 600; color: #06120a; background: var(--sprout); }
+.log-add button:disabled { opacity: 0.4; cursor: default; }
+
+.log-list { list-style: none; display: flex; flex-direction: column; gap: 6px; max-height: 148px; overflow-y: auto; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 9px; }
+.log-list li { display: flex; align-items: baseline; gap: 8px; font-size: 0.76rem; }
+.log-ico { flex: 0 0 auto; }
+.log-text { flex: 1 1 auto; color: rgba(216, 230, 210, 0.85); }
+.log-time { flex: 0 0 auto; font-size: 0.66rem; color: rgba(216, 230, 210, 0.4); }
+
+@media (max-width: 640px) {
+  .detail { left: 12px; right: 12px; width: auto; bottom: 12px; }
+  .legend { display: none; }
 }
