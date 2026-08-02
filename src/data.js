@@ -163,3 +163,12 @@ export const nav = [
 ];
 
 export const threadById = Object.fromEntries(threads.map((t) => [t.id, t]));
+
+// crops the user can choose for a bed
+export const CROP_CHOICES = [
+  { id: "flower", label: "Flower" },
+  { id: "cabbage", label: "Cabbage" },
+  { id: "carrot", label: "Carrot" },
+  { id: "tomato", label: "Tomato" },
+  { id: "leafy", label: "Leafy" },
+];

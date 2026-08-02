@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { threadById, STAGES, STAGE_ORDER, GROWTH_PER_STAGE, timeAgo, needsWater } from "../data.js";
+import { threadById, STAGES, STAGE_ORDER, GROWTH_PER_STAGE, timeAgo, needsWater, CROP_CHOICES } from "../data.js";
 import { PixelSprite } from "../pixels.jsx";
 
-// which full crop a thread grows to when flourishing
+// which full crop a thread grows to by default (user can override r.crop)
 const CROP = {
   technology: "leafy", philosophy: "cabbage", business: "carrot",
   health: "tomato", nature: "pond", relationships: "flower", ideas: "flower",
@@ -11,16 +11,8 @@ function cropSprite(r) {
   if (r.id === "rest") return "pond";
   if (r.stage === "seed") return "seed";
   if (r.stage === "sprout") return "sprout";
-  if (r.stage === "growing") return "leafy";
-  return CROP[r.thread] || "leafy";
+  return r.crop || CROP[r.thread] || "leafy"; // growing & flourishing show the chosen crop
 }
-
-// tidy plot layout: beds + a few decorations, like a real garden
-const LAYOUT = [
-  { deco: "tree", size: 72 }, { deco: "well", size: 48 }, { region: "studio" }, { region: "health" },
-  { region: "relationships" }, { region: "business" }, { region: "philosophy" }, { deco: "sign", size: 30 },
-  { region: "ideas" }, { region: "rest" }, { empty: true }, { deco: "can", size: 30 },
-];
 
 // grass decorations scattered around the plot
 const GRASS = [
@@ -35,14 +27,15 @@ function StagePips({ stage }) {
   return <span className="pips">{STAGE_ORDER.map((s, i) => <i key={s} className={i <= idx ? "on" : ""} />)}</span>;
 }
 
-const LOG_ICON = { water: "💧", note: "✎", grow: "🌸" };
+const LOG_ICON = { water: "💧", note: "✎", grow: "🌸", sun: "☀️" };
 
-function Detail({ region, onClose, onWater, onNote }) {
+function Detail({ region, onClose, onWater, onNote, onSetCrop, onStartTimer, timerRunning }) {
   const [text, setText] = useState("");
   const t = threadById[region.thread];
   const st = STAGES[region.stage];
   const thirsty = needsWater(region.lastTs);
   const submitNote = () => { const v = text.trim(); if (!v) return; onNote(region.id, v); setText(""); };
+  const current = region.crop || null;
 
   return (
     <div className="detail" onClick={(e) => e.stopPropagation()} style={{ "--rc": t?.color }}>
@@ -63,9 +56,31 @@ function Detail({ region, onClose, onWater, onNote }) {
       <p className="detail-note">{region.note}</p>
       <div className="detail-meta">
         <span>🌿 tended {region.tended}×</span>
+        <span>☀️ {region.sunshine || 0}m of sunshine</span>
         <span className={thirsty ? "thirsty" : ""}>💧 last watered {timeAgo(region.lastTs)}{thirsty ? " · needs water" : ""}</span>
       </div>
-      <div className="detail-actions"><button className="btn-water" onClick={() => onWater(region.id)}>💧 Water it</button></div>
+
+      {/* customise which plant grows here */}
+      {region.id !== "rest" && (
+        <div className="crop-picker">
+          <span className="crop-picker-label">grows</span>
+          <div className="crop-swatches">
+            {CROP_CHOICES.map((c) => (
+              <button key={c.id} className={`swatch ${current === c.id ? "on" : ""}`} title={c.label}
+                onClick={() => onSetCrop(region.id, c.id)}>
+                <PixelSprite kind={c.id} color={t?.color || "#8fe39a"} size={22} />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="detail-actions">
+        <button className="btn-water" onClick={() => onWater(region.id)}>💧 Water</button>
+        <button className="btn-sun" disabled={timerRunning} onClick={() => onStartTimer(region.id)}>
+          {timerRunning ? "☀️ giving…" : "☀️ Sunshine"}
+        </button>
+      </div>
       <div className="log-add">
         <input value={text} onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && submitNote()} placeholder="log what you did here…" />
@@ -105,7 +120,7 @@ function Bed({ region, active, thirsty, onHover, onSelect, selected }) {
   );
 }
 
-export default function GardenScene({ regions, hover, selected, onHover, onSelect, onWater, onNote, onCheckIn }) {
+export default function GardenScene({ regions, hover, selected, timerId, onHover, onSelect, onWater, onNote, onSetCrop, onStartTimer, onCheckIn }) {
   const sel = regions.find((r) => r.id === selected);
   const byId = Object.fromEntries(regions.map((r) => [r.id, r]));
   const thirstyCount = regions.filter((r) => needsWater(r.lastTs)).length;
@@ -123,31 +138,17 @@ export default function GardenScene({ regions, hover, selected, onHover, onSelec
         <div className="thirst-summary">💧 {thirstyCount} {thirstyCount === 1 ? "bed needs" : "beds need"} water</div>
       )}
 
-      {/* the fenced plot */}
+      {/* the fenced plot — only your plant beds live here */}
       <div className="plot" onClick={(e) => e.stopPropagation()}>
         <div className="beds">
-          {LAYOUT.map((cell, i) => {
-            if (cell.region) {
-              const r = byId[cell.region];
-              if (!r) return <div key={i} className="cell" />;
-              return (
-                <div key={i} className="cell">
-                  <Bed region={r} selected={selected}
-                    active={hover === r.id || selected === r.id}
-                    thirsty={needsWater(r.lastTs)}
-                    onHover={onHover} onSelect={onSelect} />
-                </div>
-              );
-            }
-            if (cell.deco) {
-              return (
-                <div key={i} className="cell deco-cell">
-                  <PixelSprite kind={cell.deco} color="#8fe39a" size={cell.size || 40} />
-                </div>
-              );
-            }
-            return <div key={i} className="cell" />;
-          })}
+          {regions.map((r) => (
+            <div key={r.id} className="cell">
+              <Bed region={r} selected={selected}
+                active={hover === r.id || selected === r.id}
+                thirsty={needsWater(r.lastTs)}
+                onHover={onHover} onSelect={onSelect} />
+            </div>
+          ))}
         </div>
       </div>
 
@@ -160,7 +161,8 @@ export default function GardenScene({ regions, hover, selected, onHover, onSelec
         </div>
       </div>
 
-      {sel && <Detail region={sel} onClose={() => onSelect(null)} onWater={onWater} onNote={onNote} />}
+      {sel && <Detail region={sel} onClose={() => onSelect(null)} onWater={onWater} onNote={onNote}
+        onSetCrop={onSetCrop} onStartTimer={onStartTimer} timerRunning={timerId === sel.id} />}
     </section>
   );
 }

@@ -38,30 +38,27 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 
 /* ── the fenced plot ── */
 .plot {
-  position: relative; width: min(900px, 94vw); padding: 26px;
+  position: relative; width: min(900px, 94vw); padding: 30px 26px;
   border-radius: 6px;
-  background:
-    repeating-linear-gradient(90deg, transparent 0 26px, rgba(0,0,0,0.06) 26px 28px),
-    repeating-linear-gradient(0deg, transparent 0 26px, rgba(0,0,0,0.06) 26px 28px),
-    linear-gradient(180deg, #6d4c31, #5f4229);
+  background: radial-gradient(130% 110% at 50% 0%, #71502f 0%, #5c3f27 75%);
   box-shadow:
     inset 0 0 0 5px #573a22,
     0 0 0 6px var(--wood), 0 0 0 9px var(--wood-2),
     0 22px 46px -20px rgba(0,0,0,0.55);
 }
-.beds { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px 18px; }
-.cell { min-height: 96px; display: grid; place-items: center; }
+.beds { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px 16px; }
+.cell { min-height: 92px; display: grid; place-items: center; }
 .deco-cell { opacity: 0.96; }
 
-/* ── a bed (tilled patch of crops) ── */
+/* ── a bed: plants sit directly on the open soil (no boxed grid) ── */
 .bed {
-  position: relative; width: 100%; min-height: 92px;
+  position: relative; width: 100%; min-height: 88px;
   display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px;
-  padding: 8px 8px 7px; border-radius: 4px;
-  background: rgba(0, 0, 0, 0.16); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.18);
-  transition: transform 0.14s ease, box-shadow 0.14s ease;
+  padding: 6px; background: none; box-shadow: none; border-radius: 0;
+  transition: transform 0.14s ease;
 }
-.bed:hover, .bed.on { transform: translateY(-2px); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.18), 0 0 0 2px var(--rc), 0 8px 18px -8px rgba(0,0,0,0.6); }
+.bed:hover, .bed.on { transform: translateY(-3px); }
+.bed:hover .crops, .bed.on .crops { filter: drop-shadow(0 0 7px var(--rc)); }
 .bed.thirsty .crops { filter: saturate(0.6) brightness(0.86); }
 .crops { display: flex; align-items: flex-end; justify-content: center; gap: 3px; min-height: 40px; }
 .bed .psprite { animation: sway 6s ease-in-out infinite; transform-origin: bottom center; }
@@ -167,3 +164,33 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
   .legend { display: none; }
 }
 @media (max-width: 460px) { .beds { grid-template-columns: repeat(2, 1fr); } }
+
+/* ── crop picker (customise the plant) ── */
+.crop-picker { display: flex; align-items: center; gap: 9px; margin-bottom: 11px; }
+.crop-picker-label { font-size: 0.72rem; color: rgba(255,255,255,0.5); }
+.crop-swatches { display: flex; gap: 5px; }
+.swatch { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 7px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); }
+.swatch:hover { border-color: var(--rc); }
+.swatch.on { border-color: var(--rc); box-shadow: 0 0 0 1px var(--rc); background: color-mix(in srgb, var(--rc) 16%, transparent); }
+
+/* ── dual actions: water + sunshine ── */
+.detail-actions { display: flex; gap: 8px; margin-bottom: 9px; }
+.btn-water, .btn-sun { flex: 1; width: auto; margin: 0; padding: 9px; border-radius: 8px; font-family: inherit; font-size: 0.8rem; }
+.btn-sun { color: #3a2600; background: linear-gradient(180deg, #ffd873, #f0b53c); box-shadow: 0 3px 0 #b9852a; }
+.btn-sun:active { transform: translateY(2px); box-shadow: 0 1px 0 #b9852a; }
+.btn-sun:disabled { opacity: 0.6; cursor: default; }
+
+/* ── sunshine timer bar ── */
+.sun-timer {
+  position: fixed; left: 18px; bottom: 18px; z-index: 40;
+  display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px;
+  background: rgba(42, 31, 10, 0.94); border: 2px solid #f0b53c;
+  box-shadow: 0 12px 30px -8px rgba(0,0,0,0.6); font-size: 0.82rem; color: rgba(255,255,255,0.85);
+  image-rendering: auto;
+}
+.sun-ico { font-size: 1.1rem; animation: sunpulse 2s ease-in-out infinite; }
+@keyframes sunpulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+.sun-label b { color: #ffd873; }
+.sun-time { font-variant-numeric: tabular-nums; color: #ffd873; font-size: 1.05rem; }
+.sun-stop { padding: 6px 13px; border-radius: 8px; background: #f0b53c; color: #3a2600; font-size: 0.78rem; font-weight: 600; }
+.sun-stop:hover { filter: brightness(1.06); }
