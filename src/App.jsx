@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { regions as initialRegions, STAGE_ORDER, GROWTH_PER_STAGE, STAGES } from "./data.js";
 import GardenScene from "./components/GardenScene.jsx";
+import Library from "./components/Library.jsx";
 
 export default function App() {
   const [regions, setRegions] = useState(initialRegions);
   const [hover, setHover] = useState(null);
   const [selected, setSelected] = useState(null);
+  const [view, setView] = useState("garden");
 
-  // tending a plant = watering it or logging attention. Both refresh it, add a
-  // log, and nudge growth; enough tending grows it to the next stage.
   function tend(id, type, text) {
     setRegions((rs) =>
       rs.map((r) => {
@@ -30,15 +30,26 @@ export default function App() {
 
   return (
     <div className="app-min">
-      <GardenScene
-        regions={regions}
-        hover={hover}
-        selected={selected}
-        onHover={setHover}
-        onSelect={setSelected}
-        onWater={(id, text) => tend(id, "water", text)}
-        onNote={(id, text) => tend(id, "note", text)}
-      />
+      {view === "garden" ? (
+        <GardenScene
+          regions={regions}
+          hover={hover}
+          selected={selected}
+          onHover={setHover}
+          onSelect={setSelected}
+          onWater={(id, text) => tend(id, "water", text)}
+          onNote={(id, text) => tend(id, "note", text)}
+          onCheckIn={() => {}}
+        />
+      ) : (
+        <Library />
+      )}
+
+      {/* minimal corner nav */}
+      <nav className="corner-nav">
+        <button className={view === "garden" ? "on" : ""} onClick={() => setView("garden")} title="Garden">🌱</button>
+        <button className={view === "library" ? "on" : ""} onClick={() => setView("library")} title="Library">📖</button>
+      </nav>
     </div>
   );
 }

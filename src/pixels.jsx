@@ -1,101 +1,72 @@
-// Tiny hand-made pixel-art sprites, drawn as crisp SVG rects. Letters map to
-// colours; L/P/A take the region's thread colour so each plant is tinted.
+// Top-down pixel-art sprites (crisp SVG rects). Letters map to colours; L/P take
+// the region's thread colour (so flower petals carry the thread's identity).
 const FIXED = {
-  T: "#6b4a2b", // trunk
-  S: "#4f9a5f", // stem
-  W: "#3f93b4", // water
-  F: "#33453a", // frame
-  D: "#3a2e22", // soil
-  R: "#3f7a4e", // grass
+  T: "#6b4a2b", // trunk / wood
+  V: "#4e8c3f", // tree canopy light
+  v: "#37692b", // tree canopy dark
+  r: "#d1493f", // fruit
+  G: "#57a05f", // leaf light
+  g: "#3c7a49", // leaf dark
+  O: "#ffd94a", // flower centre
+  C: "#e08a3a", // carrot
+  R: "#d1443a", // tomato
+  B: "#74b45c", // cabbage light
+  b: "#4e8c43", // cabbage dark
+  W: "#4aa6cf", // water
+  w: "#9aa0a8", // stone light
+  s: "#6a7078", // stone dark
+  M: "#5a4230", // soil mound
+  D: "#3f2c1d", // dark soil
+  K: "#4e8c3f", // grass tuft
+  e: "#eef3ea", // white petal
 };
 
 function hexA(hex, a) {
   const n = hex.replace("#", "");
-  const r = parseInt(n.slice(0, 2), 16), g = parseInt(n.slice(2, 4), 16), b = parseInt(n.slice(4, 6), 16);
-  return `rgba(${r},${g},${b},${a})`;
+  return `rgba(${parseInt(n.slice(0, 2), 16)},${parseInt(n.slice(2, 4), 16)},${parseInt(n.slice(4, 6), 16)},${a})`;
 }
 
 export const SPRITES = {
-  // early growth stages (universal, tinted by thread)
-  seed: [
-    ".......",
-    "...P...",
-    "..DDD..",
-    ".DDDDD.",
-    "DDDDDDD",
+  // crop maturity (shared)
+  seed: [".....", "..G..", ".MMM.", "MMMMM"],
+  sprout: [".....", ".L.L.", ".LLL.", "..M.."],
+  leafy: [".GGG.", "GGgGG", "GgGgG", "GGgGG", ".GGG."],
+  // full crops
+  flower: [".PPPPP.", "PPOOOPP", "PPOOOPP", "PPOOOPP", ".PPPPP."],
+  cabbage: [".bbb.", "bBBBb", "bBgBb", "bBBBb", ".bbb."],
+  carrot: [".G.G.", "GGGGG", "GCCCG", "GGGGG", ".G.G."],
+  tomato: [".GGG.", "GRGRG", "GgGgG", "GRGRG", ".GGG."],
+  // decorations
+  tree: [
+    "...VVVVV...",
+    "..VVVvVVV..",
+    ".VVrVVVrVV.",
+    "VVVVVVVVVVV",
+    "VvVVVrVVVvV",
+    "VVVVVVVVVVV",
+    ".VVrVVVVvV.",
+    "..VVVVVVV..",
+    "...VVVVV...",
+    "....TTT....",
   ],
-  sprout: [
-    ".......",
-    "..L.L..",
-    "..LLL..",
-    "...S...",
-    "..DDD..",
-    ".DDDDD.",
+  well: [
+    "TwwwwwT",
+    "wWWWWWw",
+    "wWWWWWw",
+    "wWWWWWw",
+    "sssssss",
+    "T.....T",
+    "T.....T",
   ],
-  grove: [
-    "..LLLL..",
-    ".LLLLLL.",
-    "LLLLLLLL",
-    "LLLLLLLL",
-    ".LLLLLL.",
-    "..LLLL..",
-    "...TT...",
-    "...TT...",
-  ],
-  orchard: [
-    "..LLLL..",
-    ".LLLLLL.",
-    "LLLLLLLL",
-    ".LLPLLL.",
-    "..LLLL..",
-    "...TT...",
-    "...TT...",
-  ],
-  greenhouse: [
-    "...FF...",
-    "..FFFF..",
-    ".FFFFFF.",
-    "FFFFFFFF",
-    "FAAAAAAF",
-    "FAAAAAAF",
-    "FAAAAAAF",
-    "FFFFFFFF",
-  ],
-  herbs: [
-    "........",
-    ".L.L.L.L",
-    "LLL.LLL.",
-    ".S.S.S.S",
-    ".S.S.S.S",
-    "DDDDDDDD",
-  ],
-  pond: [
-    "..WWWWWW..",
-    ".WWWWWWWW.",
-    "WWWWWWWWWW",
-    ".WWWWWWWW.",
-    "..WWWWWW..",
-  ],
-  meadow: [
-    "..........",
-    "...PP.....",
-    "..PPPP...P",
-    "...S....PP",
-    ".L.S..L.S.",
-    "RRRRRRRRRR",
-  ],
-  seedbed: [
-    ".......",
-    "..L.L..",
-    "..LLL..",
-    "...S...",
-    "...S...",
-    "..DDD..",
-  ],
+  pond: ["..WWWWW..", ".WWWWWWW.", "WWWWWWWWW", ".WWWWWWW.", "..WWWWW.."],
+  sign: ["TTTTTT", "T....T", "TTTTTT", "..TT..", "..TT.."],
+  can: [".sss..", "sssss.", "sssssS", "sssss.", ".sss.."],
+  tuft: ["K.K.K", "KKKKK"],
+  daisy: [".e.", "eOe", ".e."],
 };
 
-export function PixelSprite({ kind, color, size = 78 }) {
-  const rows = SPRITES[kind] || SPRITES.grove;
+export function PixelSprite({ kind, color = "#8fe39a", size = 40 }) {
+  const rows = SPRITES[kind] || SPRITES.leafy;
   const w = rows[0].length, h = rows.length;
   const colorFor = (ch) => {
     if (ch === "L" || ch === "P") return color;
@@ -108,7 +79,7 @@ export function PixelSprite({ kind, color, size = 78 }) {
       {rows.map((row, y) =>
         [...row].map((ch, x) => {
           const c = colorFor(ch);
-          return c ? <rect key={`${x}-${y}`} x={x} y={y} width="1.02" height="1.02" fill={c} /> : null;
+          return c ? <rect key={`${x}-${y}`} x={x} y={y} width="1.03" height="1.03" fill={c} /> : null;
         })
       )}
     </svg>
