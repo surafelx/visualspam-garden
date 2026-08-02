@@ -28,14 +28,53 @@ function hexA(hex, a) {
 
 export const SPRITES = {
   // crop maturity (shared)
-  seed: [".....", "..G..", ".MMM.", "MMMMM"],
-  sprout: [".....", ".L.L.", ".LLL.", "..M.."],
-  leafy: [".GGG.", "GGgGG", "GgGgG", "GGgGG", ".GGG."],
-  // full crops
-  flower: [".PPPPP.", "PPOOOPP", "PPOOOPP", "PPOOOPP", ".PPPPP."],
-  cabbage: [".bbb.", "bBBBb", "bBgBb", "bBBBb", ".bbb."],
-  carrot: [".G.G.", "GGGGG", "GCCCG", "GGGGG", ".G.G."],
-  tomato: [".GGG.", "GRGRG", "GgGgG", "GRGRG", ".GGG."],
+  seed: [".......", "...L...", ".MMMMM.", "MMMMMMM"],
+  sprout: [".......", "..L.L..", "..LLL..", "...S...", ".MMMMM.", "MMMMMMM"],
+  leafy: [
+    "..GGG..",
+    ".GgGgG.",
+    "GGGgGGG",
+    "GgGGGgG",
+    "GGGgGGG",
+    ".GgGgG.",
+    "..GGG..",
+  ],
+  // full crops — more detailed so they read as real plants
+  flower: [
+    "..P.P..",
+    ".PPPPP.",
+    "PPOOOPP",
+    "PPOOOPP",
+    "PPOOOPP",
+    ".PPPPP.",
+    "..P.P..",
+  ],
+  cabbage: [
+    "..bbb..",
+    ".bBBBb.",
+    "bBGGGBb",
+    "bBGgGBb",
+    "bBGGGBb",
+    ".bBBBb.",
+    "..bbb..",
+  ],
+  carrot: [
+    ".G.G.G.",
+    "GGGGGGG",
+    ".GGGGG.",
+    "..CCC..",
+    "..CCC..",
+    "...C...",
+  ],
+  tomato: [
+    ".GGGGG.",
+    "GGGGGGG",
+    "GGrGrGG",
+    "GgGGGgG",
+    "GrGGGrG",
+    "GGGGGGG",
+    ".GGGGG.",
+  ],
   // decorations
   tree: [
     "...VVVVV...",
