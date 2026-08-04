@@ -92,6 +92,7 @@ export default function App() {
 
   const [timerPhase, setTimerPhase] = useState("idle");
   const [timerRegionId, setTimerRegionId] = useState(null);
+  const [timerPlantId, setTimerPlantId] = useState(null);
   const [timerMins, setTimerMins] = useState(0);
 
   const applyGrow = (regionData) => {
@@ -129,15 +130,27 @@ export default function App() {
     } catch (e) { console.error(e); }
   };
 
-  const openPicker = (id) => { setTimerRegionId(id); setTimerPhase("picking"); };
+  const openPicker = (id) => {
+    setTimerRegionId(id);
+    const region = regions.find((r) => r.id === id);
+    if (region?.plants?.length > 0) {
+      setTimerPhase("picking-plant");
+    } else {
+      setTimerPhase("picking");
+    }
+  };
+  const pickPlant = (plantId) => { setTimerPlantId(plantId); setTimerPhase("picking"); };
   const startCountdown = (mins) => { setTimerMins(mins); setTimerPhase("countdown"); };
-  const cancelTimer = () => { setTimerPhase("idle"); setTimerRegionId(null); setTimerMins(0); };
+  const cancelTimer = () => { setTimerPhase("idle"); setTimerRegionId(null); setTimerPlantId(null); setTimerMins(0); };
   const completeCountdown = (mins, note) => {
     if (timerRegionId) {
-      const text = note ? `${mins}m of sunshine — ${note}` : `${mins}m of sunshine`;
+      const region = regions.find((r) => r.id === timerRegionId);
+      const plant = timerPlantId ? region?.plants?.find((p) => p.id === timerPlantId) : null;
+      const plantName = plant ? ` — ${plant.name}` : "";
+      const text = note ? `${mins}m of sunshine${plantName} — ${note}` : `${mins}m of sunshine${plantName}`;
       grow(timerRegionId, { type: "sun", text, mins }, (r) => ({ sunshine: (r.sunshine || 0) + mins }));
     }
-    setTimerPhase("idle"); setTimerRegionId(null); setTimerMins(0);
+    setTimerPhase("idle"); setTimerRegionId(null); setTimerPlantId(null); setTimerMins(0);
   };
 
   const timerRegion = timerRegionId && regions.find((r) => r.id === timerRegionId);
@@ -333,6 +346,26 @@ export default function App() {
         </button>
       </aside>
 
+      {timerPhase === "picking-plant" && timerRegion && (
+        <div className="modal-backdrop" onClick={cancelTimer}>
+          <div className="modal plant-picker" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={cancelTimer}>✕</button>
+            <h2 className="ms-title">Choose a plant</h2>
+            <p className="ms-region">in {timerRegion.label}</p>
+            <div className="pp-list">
+              {timerRegion.plants.map((p) => (
+                <button key={p.id} className="pp-item" onClick={() => pickPlant(p.id)}>
+                  <span className="pp-name">{p.name}</span>
+                  <span className="pp-crop">{p.crop}</span>
+                </button>
+              ))}
+            </div>
+            <button className="ms-save" style={{ marginTop: 12 }} onClick={() => { setTimerPlantId(null); setTimerPhase("picking"); }}>
+              Skip — sunshine for whole bed
+            </button>
+          </div>
+        </div>
+      )}
       {timerPhase === "picking" && timerRegion && (
         <DurationPicker regionLabel={timerRegion.label} onStart={startCountdown} onCancel={cancelTimer} />
       )}

@@ -378,6 +378,18 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 .dp-start:active { transform: translateY(3px); box-shadow: 0 1px 0 #b9852a; }
 .dp-start:disabled { opacity: 0.4; cursor: default; transform: none; box-shadow: 0 4px 0 #b9852a; }
 
+.plant-picker { text-align: center; }
+.pp-list { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.pp-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-radius: 10px;
+  background: rgba(255,255,255,0.06); border: 2px solid rgba(255,255,255,0.1);
+  cursor: pointer; font-family: inherit; color: #fff;
+}
+.pp-item:hover { background: rgba(255,255,255,0.1); border-color: #f0b53c; }
+.pp-name { font-weight: 600; }
+.pp-crop { font-size: 0.8rem; color: rgba(255,255,255,0.4); }
+
 /* ── full-screen countdown overlay ── */
 .countdown-overlay {
   position: fixed; inset: 0; z-index: 90;
