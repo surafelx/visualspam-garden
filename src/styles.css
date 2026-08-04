@@ -1,4 +1,5 @@
-@import url("https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap");
+@import url("https://db.onlinewebfonts.com/c/4571adf8e6d8270ea61a4f43a3ef31d2?family=Departure+Mono");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap");
 
 :root {
   --grass: #6fb04a;
@@ -8,7 +9,7 @@
   --wood-2: #5a3d22;
   --ink: #eef3ea;
   --sprout: #8fe39a;
-  --font: "Pixelify Sans", monospace;
+  --font: "Departure Mono", monospace;
   --serif: "Fraunces", Georgia, serif;
 }
 
@@ -827,3 +828,136 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 
 /* ── settings modal ── */
 .settings-modal { max-width: 400px; }
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/*  BED DETAIL PAGE                                                      */
+/* ═══════════════════════════════════════════════════════════════════════ */
+.bed-detail-page {
+  height: 100%; overflow-y: auto; padding: 28px 32px 40px;
+  background: #f4f6ef;
+  animation: fadeIn 0.25s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.bdp-header {
+  display: flex; align-items: center; gap: 16px; margin-bottom: 28px;
+}
+.bdp-back {
+  padding: 6px 14px; border-radius: 8px; font-size: 0.82rem;
+  color: #6b6455; background: #e7ebdd; border: 1px solid #d4d9c8;
+  transition: background 0.12s;
+}
+.bdp-back:hover { background: #d4d9c8; }
+.bdp-title { flex: 1; display: flex; align-items: center; gap: 12px; }
+.bdp-icon { font-size: 1.6rem; }
+.bdp-name { font-family: var(--font); font-size: 1.3rem; font-weight: 600; color: #2c2920; }
+.bdp-sub { font-size: 0.78rem; color: #8a9079; margin-top: 2px; }
+.bdp-actions { display: flex; gap: 8px; }
+.bdp-edit, .bdp-del {
+  padding: 6px 12px; border-radius: 8px; font-size: 0.78rem;
+  border: 1px solid #d4d9c8; transition: background 0.12s;
+}
+.bdp-edit { color: #5a6a4a; background: #e7ebdd; }
+.bdp-edit:hover { background: #d4d9c8; }
+.bdp-del { color: #a05a4a; background: #f0e8e4; }
+.bdp-del:hover { background: #e8d8d2; }
+
+.bdp-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+  align-items: start;
+}
+@media (max-width: 800px) { .bdp-grid { grid-template-columns: 1fr; } }
+
+.bdp-col { display: flex; flex-direction: column; gap: 16px; }
+
+.bdp-card {
+  background: #f9faf6; border: 1px solid #e2e6d7; border-radius: 12px;
+  padding: 18px 20px; box-shadow: 0 4px 12px -6px rgba(0,0,0,0.12);
+}
+.bdp-card-head {
+  font-family: var(--font); font-size: 0.9rem; font-weight: 600; color: #3a3d30;
+  margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between;
+}
+
+.bdp-grow { margin-bottom: 10px; }
+.bdp-grow .grow-bar { margin-bottom: 4px; }
+.bdp-grow-sub { font-size: 0.72rem; color: #8a9079; }
+.bdp-flourishing { color: #4c9a63; font-size: 0.85rem; padding: 8px 0; }
+.bdp-stats { display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.78rem; color: #6b6455; }
+.bdp-stats .thirsty { color: #2f7fa0; font-weight: 600; }
+
+.bdp-crops {
+  display: flex; align-items: flex-end; gap: 8px; min-height: 50px;
+  margin-bottom: 10px; padding: 12px; background: #eef3ea; border-radius: 8px;
+}
+
+.bdp-actions-row { display: flex; gap: 10px; }
+.bdp-actions-row .btn-water, .bdp-actions-row .btn-sun {
+  flex: 1; padding: 10px 14px; border-radius: 10px; font-size: 0.82rem; font-weight: 500;
+  border: 1px solid #d4d9c8; transition: background 0.12s;
+}
+.bdp-actions-row .btn-water { background: #dcecf4; color: #2f7fa0; }
+.bdp-actions-row .btn-water:hover { background: #c4dfe8; }
+.bdp-actions-row .btn-sun { background: #fff3d4; color: #8a6a00; }
+.bdp-actions-row .btn-sun:hover { background: #ffe8a8; }
+.bdp-actions-row .btn-sun:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.bdp-note-input {
+  display: flex; gap: 8px; margin-bottom: 12px;
+}
+.bdp-note-input input {
+  flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid #d4d9c8;
+  font-family: var(--font); font-size: 0.8rem; background: #fff; color: #2c2920;
+}
+.bdp-note-input input:focus { outline: none; border-color: #8fe39a; }
+.bdp-note-input button {
+  padding: 8px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 500;
+  background: #8fe39a; color: #2c4a20; transition: background 0.12s;
+}
+.bdp-note-input button:hover { background: #7cd488; }
+.bdp-note-input button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.bdp-log-list { list-style: none; }
+.bdp-log-empty { font-size: 0.78rem; color: #b0a898; padding: 8px 0; }
+.bdp-log-item {
+  display: flex; align-items: flex-start; gap: 8px; padding: 7px 0;
+  border-bottom: 1px solid #eef0e6; font-size: 0.78rem;
+}
+.bdp-log-item:last-child { border-bottom: none; }
+.bdp-log-icon { flex: 0 0 auto; font-size: 0.82rem; }
+.bdp-log-text { flex: 1; color: #4a463c; line-height: 1.4; }
+.bdp-log-time { flex: 0 0 auto; color: #b0a898; font-size: 0.7rem; }
+
+.bdp-ics-btn {
+  width: 100%; margin-top: 12px; padding: 8px 14px; border-radius: 8px;
+  font-size: 0.78rem; font-weight: 500; text-align: center;
+  background: #e7ebdd; color: #4a6a3a; border: 1px solid #d4d9c8;
+  transition: background 0.12s;
+}
+.bdp-ics-btn:hover { background: #d4d9c8; }
+
+.bdp-timeline-section { margin-bottom: 14px; }
+.bdp-timeline-section:last-child { margin-bottom: 0; }
+.bdp-timeline-label { font-size: 0.75rem; font-weight: 600; color: #6b6455; margin-bottom: 6px; }
+.bdp-timeline { list-style: none; }
+.bdp-tl-item {
+  display: flex; align-items: flex-start; gap: 8px; padding: 5px 0;
+  font-size: 0.75rem;
+}
+.bdp-tl-dot { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; margin-top: 4px; }
+.bdp-tl-dot.grow { background: #c4f0a0; }
+.bdp-tl-dot.sun { background: #ffd873; }
+.bdp-tl-dot.water { background: #7cc4e8; }
+.bdp-tl-dot.note { background: #c4b8a0; }
+.bdp-tl-text { flex: 1; color: #4a463c; line-height: 1.3; }
+.bdp-tl-time { flex: 0 0 auto; color: #b0a898; font-size: 0.68rem; }
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/*  SIDEBAR CALENDAR SYNC                                                */
+/* ═══════════════════════════════════════════════════════════════════════ */
+.rail-ics-btn {
+  width: 100%; padding: 10px 14px; border-radius: 10px; font-size: 0.78rem;
+  text-align: center; color: #4a6a3a; background: #e7ebdd; border: 1px solid #d4d9c8;
+  transition: background 0.12s; margin-top: 4px;
+}
+.rail-ics-btn:hover { background: #d4d9c8; }

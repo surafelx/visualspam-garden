@@ -14,6 +14,7 @@ import DaySchedule from "./components/DaySchedule.jsx";
 import DurationPicker from "./components/DurationPicker.jsx";
 import CountdownTimer from "./components/CountdownTimer.jsx";
 import BedForm from "./components/BedForm.jsx";
+import BedDetailPage from "./components/BedDetailPage.jsx";
 
 function getSettings() {
   try {
@@ -158,8 +159,32 @@ export default function App() {
     try { const saved = await api.updateRegion(bed.id, bed); applyGrow(saved); setBedForm(null); } catch (e) { console.error(e); }
   };
   const deleteBed = async (id) => {
-    try { await api.deleteRegion(id); setRegions((rs) => rs.filter((r) => r.id !== id)); setSelected(null); setConfirmDelete(null); } catch (e) { console.error(e); }
+    try { await api.deleteRegion(id); setRegions((rs) => rs.filter((r) => r.id !== id)); setSelected(null); setConfirmDelete(null); setView("garden"); } catch (e) { console.error(e); }
   };
+
+  const genAllIcs = () => {
+    const lines = [
+      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//VisualSpam Garden//All Beds//EN",
+      "X-WR-CALNAME:VisualSpam Garden — All Milestones",
+    ];
+    regions.forEach((r) => {
+      (r.milestones || []).filter((m) => !m.done && m.deadline).forEach((ms) => {
+        const d = new Date(ms.deadline);
+        const dt = d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+        lines.push("BEGIN:VEVENT", `DTSTART:${dt}`, `DTEND:${dt}`, `SUMMARY:[${r.label}] ${ms.title}`, `DESCRIPTION:Bed: ${r.label} — ${STAGES[r.stage]?.label || r.stage}`, "END:VEVENT");
+      });
+    });
+    lines.push("END:VCALENDAR");
+    const blob = new Blob([lines.join("\r\n")], { type: "text/calendar" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "visualspam-garden.ics";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const viewBedDetail = (id) => { setView("bed"); setSelected(id); };
 
   if (loading) {
     return <div className="app-min" style={{ display: "grid", placeItems: "center", color: "#6b6455" }}>loading…</div>;
@@ -190,7 +215,6 @@ export default function App() {
   return (
     <div className="dash">
       <aside className="dash-left">
-        <div className="dash-brand" title="VisualSpam">🌱</div>
         <nav className="dash-nav">
           {NAV.map((n) => (
             <button key={n.id} className={view === n.id ? "on" : ""} onClick={() => setView(n.id)} title={n.label}>
@@ -249,6 +273,22 @@ export default function App() {
             onEditBed={(bed) => setBedForm(bed)}
             onDeleteBed={(id) => setConfirmDelete(id)}
           />
+        ) : view === "bed" && selected ? (
+          <BedDetailPage
+            region={regions.find((r) => r.id === selected)}
+            onBack={() => setView("garden")}
+            onWater={(id, text) => tend(id, "water", text)}
+            onNote={(id, text) => tend(id, "note", text)}
+            onSetCrop={setCrop}
+            onStartTimer={openPicker}
+            timerRunning={timerPhase === "countdown" && timerRegionId === selected}
+            onAddMilestone={addMilestone}
+            onUpdateMilestone={updateMilestone}
+            onToggleMilestone={toggleMilestone}
+            onDeleteMilestone={deleteMilestone}
+            onEditBed={(bed) => setBedForm(bed)}
+            onDeleteBed={(id) => setConfirmDelete(id)}
+          />
         ) : view === "day" ? (
           <DaySchedule regions={regions} />
         ) : view === "calendar" ? (
@@ -270,7 +310,7 @@ export default function App() {
             const st = STAGES[r.stage];
             const idx = STAGE_ORDER.indexOf(r.stage);
             return (
-              <li key={r.id} className="bed-rail-item" onClick={() => { setView("garden"); setSelected(r.id); }}>
+              <li key={r.id} className="bed-rail-item" onClick={() => viewBedDetail(r.id)}>
                 <span className="bed-rail-dot" style={{ background: t?.color }} />
                 <span className="bed-rail-main">
                   <b>{r.label}</b>
@@ -296,6 +336,11 @@ export default function App() {
             </li>
           )) : <li className="feed-empty">no activity yet — tend a bed</li>}
         </ul>
+
+        <div className="rail-head rail-head-sub">📅 Sync</div>
+        <button className="rail-ics-btn" onClick={genAllIcs} title="Export all milestones as .ics calendar file">
+          📅 Export all milestones
+        </button>
       </aside>
 
       {timerPhase === "picking" && timerRegion && (
