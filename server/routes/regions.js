@@ -98,7 +98,7 @@ function analyzeBed(region) {
 }
 
 // ── Analysis (must come before /:id routes) ──
-router.get("/analyze/all", w(async (req, res) => {
+router.get("/all/analyze", w(async (req, res) => {
   const regions = await Region.find().sort({ x: 1 });
   const analyses = regions.map(analyzeBed);
   const avgScore = Math.round(analyses.reduce((s, a) => s + a.score, 0) / analyses.length);

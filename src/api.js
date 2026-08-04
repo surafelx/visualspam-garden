@@ -25,5 +25,5 @@ export const updateMilestone = (regionId, msId, data) => request(`/regions/${reg
 export const deleteMilestone = (regionId, msId) => request(`/regions/${regionId}/milestones/${msId}`, { method: "DELETE" });
 
 // ── Analysis ──
-export const analyzeAll = () => request("/regions/analyze/all");
+export const analyzeAll = () => request("/regions/all/analyze");
 export const analyzeBed = (id) => request(`/regions/${id}/analyze`);
