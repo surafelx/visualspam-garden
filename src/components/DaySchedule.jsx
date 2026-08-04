@@ -4,6 +4,27 @@ import { dayKey, threadById } from "../data.js";
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
 const fmtHour = (h) => `${String(h).padStart(2, "0")}:00`;
 
+// Build an .ics calendar file from the planned slots (one 1-hour event each).
+function buildICS(slots, byId, date) {
+  const p = (n) => String(n).padStart(2, "0");
+  const ymd = `${date.getFullYear()}${p(date.getMonth() + 1)}${p(date.getDate())}`;
+  const stamp = `${ymd}T${p(date.getHours())}${p(date.getMinutes())}00`;
+  const esc = (s) => String(s).replace(/([,;\\])/g, "\\$1").replace(/\n/g, "\\n");
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//VisualSpam//Garden//EN", "CALSCALE:GREGORIAN"];
+  Object.entries(slots).forEach(([hStr, slot]) => {
+    const h = Number(hStr);
+    const bed = slot?.bedId ? byId[slot.bedId] : null;
+    const ms = bed?.milestones?.find((m) => m.id === slot?.milestoneId);
+    const title = bed ? `${bed.label}${ms ? ` — ${ms.name}` : slot.text ? ` — ${slot.text}` : ""}` : (slot?.text || "");
+    if (!title.trim()) return;
+    lines.push("BEGIN:VEVENT", `UID:vsg-${ymd}-${h}@visualspam`, `DTSTAMP:${stamp}`,
+      `DTSTART:${ymd}T${p(h)}0000`, `DTEND:${ymd}T${p(Math.min(h + 1, 23))}0000`,
+      `SUMMARY:🌱 ${esc(title)}`, "END:VEVENT");
+  });
+  lines.push("END:VCALENDAR");
+  return lines.join("\r\n");
+}
+
 // A 24-hour desired-schedule for the day. Each slot can target a bed, one of
 // that bed's milestones, and/or a free-text intention. Saved per-day locally.
 export default function DaySchedule({ regions = [] }) {
@@ -26,6 +47,19 @@ export default function DaySchedule({ regions = [] }) {
 
   const planned = Object.values(slots).filter((s) => s && (s.bedId || (s.text && s.text.trim()))).length;
 
+  const syncToCalendar = () => {
+    const ics = buildICS(slots, byId, new Date());
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `visualspam-day-plan-${today}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="schedule">
       <header className="schedule-head">
@@ -33,7 +67,12 @@ export default function DaySchedule({ regions = [] }) {
           <h1>Today's plan</h1>
           <p>Pick a bed, a milestone to move, and what you'll do — hour by hour.</p>
         </div>
-        <span className="schedule-count">{planned} / 24 planned</span>
+        <div className="schedule-head-right">
+          <span className="schedule-count">{planned} / 24 planned</span>
+          <button className="sync-btn" onClick={syncToCalendar} disabled={planned === 0} title="Download an .ics to import into your calendar">
+            🗓️ Sync to calendar
+          </button>
+        </div>
       </header>
 
       <ol className="schedule-list">

@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { STAGE_ORDER, GROWTH_PER_STAGE, STAGES, threadById, timeAgo } from "./data.js";
+import { STAGE_ORDER, GROWTH_PER_STAGE, STAGES, threadById, timeAgo, dayKey } from "./data.js";
 
 const FEED_ICON = { water: "💧", note: "✎", grow: "🌸", sun: "☀️", checkin: "🌱" };
+const fmtHour = (h) => `${String(h).padStart(2, "0")}:00`;
+const WEEKDAY = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTH = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 import * as api from "./api.js";
 import GardenScene from "./components/GardenScene.jsx";
 import Library from "./components/Library.jsx";
@@ -30,6 +33,11 @@ export default function App() {
   const [hover, setHover] = useState(null);
   const [selected, setSelected] = useState(null);
   const [view, setView] = useState("garden");
+  const [clock, setClock] = useState(new Date());
+  useEffect(() => {
+    const id = setInterval(() => setClock(new Date()), 15000);
+    return () => clearInterval(id);
+  }, []);
 
   // timer: "idle" | "picking" | "countdown"
   const [timerPhase, setTimerPhase] = useState("idle");
@@ -149,6 +157,16 @@ export default function App() {
     .sort((a, b) => new Date(b.ts) - new Date(a.ts))
     .slice(0, 8);
 
+  // next 3 hours from today's plan (read live from localStorage)
+  const byId = Object.fromEntries(regions.map((r) => [r.id, r]));
+  const H = clock.getHours();
+  let sched = {};
+  try { sched = JSON.parse(localStorage.getItem(`vsg_schedule_${dayKey(clock)}`)) || {}; } catch (e) { /* ignore */ }
+  const next3 = [];
+  for (let o = 0; o < 3 && H + o < 24; o++) next3.push({ h: H + o, slot: sched[H + o] });
+  const hh = String(H).padStart(2, "0");
+  const mm = String(clock.getMinutes()).padStart(2, "0");
+
   return (
     <div className="dash">
       {/* left: minimal nav rail */}
@@ -165,6 +183,32 @@ export default function App() {
 
       {/* centre: the active view */}
       <main className="dash-main">
+        {view === "garden" && (
+          <div className="now-widget now-float">
+            <div className="now-time">
+              <span className="now-clock">{hh}:{mm}</span>
+              <span className="now-date">{WEEKDAY[clock.getDay()]}, {MONTH[clock.getMonth()]} {clock.getDate()}</span>
+            </div>
+            <ul className="now-next">
+              {next3.map(({ h, slot }) => {
+                const bed = slot?.bedId ? byId[slot.bedId] : null;
+                const t = bed ? threadById[bed.thread] : null;
+                const ms = bed?.milestones?.find((m) => m.id === slot?.milestoneId);
+                const what = bed ? (ms ? ms.name : slot.text || "") : (slot?.text || "");
+                return (
+                  <li key={h} className={h === H ? "on" : ""} onClick={() => setView("day")}>
+                    <span className="now-h">{fmtHour(h)}</span>
+                    {t && <span className="now-dot" style={{ background: t.color }} />}
+                    <span className="now-what">
+                      {bed ? <><b>{bed.label}</b>{what ? ` · ${what}` : ""}</> : (what || <i>open</i>)}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+            <button className="now-plan-btn" onClick={() => setView("day")}>open day plan →</button>
+          </div>
+        )}
         {view === "garden" ? (
           <GardenScene
             regions={regions}
@@ -191,7 +235,7 @@ export default function App() {
         )}
       </main>
 
-      {/* right: minimal beds overview */}
+      {/* right: beds overview + recent */}
       <aside className="dash-right">
         <div className="rail-head">
           <span>Your beds</span>

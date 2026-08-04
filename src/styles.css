@@ -600,3 +600,36 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 .ed-done { padding: 6px 15px; border-radius: 8px; background: var(--sprout); color: #0c2413; font-family: inherit; font-size: 0.78rem; }
 .ed-clear { padding: 6px 12px; border-radius: 8px; color: #a89f8c; font-family: inherit; font-size: 0.78rem; }
 .ed-clear:hover { color: #c0392b; }
+
+/* ── now widget (right rail top): clock + next 3 hours ── */
+.now-widget { background: #eef1e6; border: 1px solid #dfe3d6; border-radius: 14px; padding: 12px; margin-bottom: 14px; }
+.now-time { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.now-clock { font-size: 1.7rem; color: #2c2920; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
+.now-date { font-size: 0.72rem; color: #857c69; }
+.now-next { list-style: none; display: flex; flex-direction: column; gap: 2px; }
+.now-next li { display: flex; align-items: center; gap: 8px; padding: 6px 7px; border-radius: 8px; font-size: 0.78rem; color: #4a463c; cursor: pointer; }
+.now-next li:hover { background: #e4e9d8; }
+.now-next li.on { background: #fff; box-shadow: inset 0 0 0 1px #e0894a55; }
+.now-next li.on .now-h { color: #e0894a; font-weight: 700; }
+.now-h { flex: 0 0 auto; width: 42px; color: #a39a86; font-variant-numeric: tabular-nums; }
+.now-dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; }
+.now-what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.now-what b { color: #2c2920; }
+.now-what i { color: #b3ab98; font-style: normal; }
+.now-plan-btn { width: 100%; margin-top: 8px; padding: 7px; border-radius: 9px; font-family: inherit; font-size: 0.74rem; color: #4c9a63; background: #e6f2e4; }
+.now-plan-btn:hover { background: #dcecd9; }
+
+/* ── sync-to-calendar button ── */
+.schedule-head-right { display: flex; align-items: center; gap: 10px; }
+.sync-btn { padding: 8px 14px; border-radius: 10px; font-family: inherit; font-size: 0.8rem; color: #2c2920; background: #fff; border: 1px solid #ddd6c4; box-shadow: 0 3px 10px -6px rgba(0,0,0,0.3); transition: filter 0.15s, transform 0.1s; }
+.sync-btn:hover:not(:disabled) { transform: translateY(-1px); border-color: #8fd39a; }
+.sync-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* now-widget floating on the central garden home (not the sidebar) */
+.now-float {
+  position: absolute; top: 16px; left: 16px; z-index: 20; width: 236px; margin: 0;
+  background: rgba(250, 251, 245, 0.94); backdrop-filter: blur(5px);
+  border: 1px solid rgba(255,255,255,0.7);
+  box-shadow: 0 14px 34px -16px rgba(30, 40, 20, 0.5);
+}
+@media (max-width: 900px) { .now-float { width: 200px; } }
