@@ -15,19 +15,39 @@ function cropSprite(r) {
   return r.crop || CROP[r.thread] || "leafy";
 }
 
-const GRASS = [
-  { x: 5, y: 10, k: "daisy" }, { x: 12, y: 35, k: "tuft" }, { x: 8, y: 65, k: "daisy" },
-  { x: 88, y: 15, k: "tuft" }, { x: 92, y: 48, k: "daisy" }, { x: 85, y: 78, k: "tuft" },
-  { x: 28, y: 6, k: "daisy" }, { x: 64, y: 5, k: "tuft" }, { x: 48, y: 92, k: "daisy" },
-  { x: 18, y: 88, k: "tuft" }, { x: 76, y: 90, k: "daisy" },
-];
+const LOG_ICON = { water: "💧", note: "✎", grow: "🌸", sun: "☀️", checkin: "🌱" };
 
 function StagePips({ stage }) {
   const idx = STAGE_ORDER.indexOf(stage);
   return <span className="pips">{STAGE_ORDER.map((s, i) => <i key={s} className={i <= idx ? "on" : ""} />)}</span>;
 }
 
-const LOG_ICON = { water: "💧", note: "✎", grow: "🌸", sun: "☀️" };
+function BedTooltip({ region }) {
+  const t = threadById[region.thread];
+  const st = STAGES[region.stage];
+  const milestones = region.milestones || [];
+  const done = milestones.filter((m) => m.done).length;
+  const total = milestones.length;
+  const pct = Math.round((region.growth / GROWTH_PER_STAGE) * 100);
+  return (
+    <div className="bed-tooltip" style={{ "--rc": t?.color }}>
+      <div className="tt-row tt-head">
+        <span className="tt-icon">{st.icon}</span>
+        <span className="tt-stage">{st.label}</span>
+        <span className="tt-pct">{pct}%</span>
+      </div>
+      <div className="tt-bar"><i style={{ width: `${pct}%` }} /></div>
+      <div className="tt-row">
+        <span>☀️ {region.sunshine || 0}m</span>
+        <span>🌿 {region.tended}× tended</span>
+      </div>
+      {total > 0 && (
+        <div className="tt-row"><span>🎯 {done}/{total} milestones</span></div>
+      )}
+      <div className="tt-row tt-note">{timeAgo(region.lastTs)}</div>
+    </div>
+  );
+}
 
 function Detail({ region, onClose, onWater, onNote, onSetCrop, onStartTimer, timerRunning,
   onAddMilestone, onUpdateMilestone, onToggleMilestone, onDeleteMilestone, onEditBed, onDeleteBed }) {
@@ -170,39 +190,16 @@ function Detail({ region, onClose, onWater, onNote, onSetCrop, onStartTimer, tim
   );
 }
 
-function BedTooltip({ region }) {
-  const t = threadById[region.thread];
-  const st = STAGES[region.stage];
-  const milestones = region.milestones || [];
-  const done = milestones.filter((m) => m.done).length;
-  const total = milestones.length;
-  const pct = Math.round((region.growth / GROWTH_PER_STAGE) * 100);
-  return (
-    <div className="bed-tooltip" style={{ "--rc": t?.color }}>
-      <div className="tt-row tt-head">
-        <span className="tt-icon">{st.icon}</span>
-        <span className="tt-stage">{st.label}</span>
-        <span className="tt-pct">{pct}%</span>
-      </div>
-      <div className="tt-bar"><i style={{ width: `${pct}%` }} /></div>
-      <div className="tt-row">
-        <span>☀️ {region.sunshine || 0}m</span>
-        <span>🌿 {region.tended}× tended</span>
-      </div>
-      {total > 0 && (
-        <div className="tt-row"><span>🎯 {done}/{total} milestones</span></div>
-      )}
-      <div className="tt-row tt-note">{timeAgo(region.lastTs)}</div>
-    </div>
-  );
-}
-
-function Bed({ region, active, thirsty, onHover, onSelect, selected, onStartTimer, onDragStart, onDragEnd }) {
+function BedCard({ region, active, thirsty, onHover, onSelect, selected, onStartTimer, onDragStart, onDragEnd }) {
   const t = threadById[region.thread];
   const st = STAGES[region.stage];
   const kind = cropSprite(region);
   const count = region.id === "rest" ? 1 : 3;
-  const size = region.id === "rest" ? 58 : region.stage === "flourishing" ? 34 : region.stage === "seed" ? 26 : 30;
+  const size = region.id === "rest" ? 72 : region.stage === "flourishing" ? 52 : region.stage === "seed" ? 38 : 46;
+  const pct = Math.round((region.growth / GROWTH_PER_STAGE) * 100);
+  const lastLog = region.logs?.[0];
+  const milestones = region.milestones || [];
+  const pendingMs = milestones.filter((m) => !m.done).length;
   const dragging = useRef(false);
   const startPos = useRef({ x: 0, y: 0 });
 
@@ -218,9 +215,7 @@ function Bed({ region, active, thirsty, onHover, onSelect, selected, onStartTime
     const handleUp = () => {
       window.removeEventListener("pointermove", handleMove);
       window.removeEventListener("pointerup", handleUp);
-      if (dragging.current) {
-        onDragEnd?.(region.id, e.clientX, e.clientY);
-      }
+      if (dragging.current) onDragEnd?.(region.id, e.clientX, e.clientY);
     };
     window.addEventListener("pointermove", handleMove);
     window.addEventListener("pointerup", handleUp);
@@ -228,20 +223,33 @@ function Bed({ region, active, thirsty, onHover, onSelect, selected, onStartTime
 
   return (
     <button
-      className={`bed stage-${region.stage} ${active ? "on" : ""} ${thirsty ? "thirsty" : ""}`}
-      style={{ "--rc": t?.color, left: `${region.x}%`, top: `${region.y}%` }}
+      className={`bed-card stage-${region.stage} ${active ? "on" : ""} ${thirsty ? "thirsty" : ""}`}
+      style={{ "--rc": t?.color }}
       onMouseEnter={() => onHover(region.id)} onMouseLeave={() => onHover(null)}
       onClick={(e) => { if (!dragging.current) { e.stopPropagation(); onSelect(region.id === selected ? null : region.id); } }}
       onPointerDown={handlePointerDown}>
       {thirsty && <span className="thirst-badge" title="needs water">💧</span>}
       <button className="bed-sun-btn" title="Give sunshine"
         onClick={(e) => { e.stopPropagation(); onStartTimer(region.id); }}>☀️</button>
-      <div className="crops">
-        {Array.from({ length: count }).map((_, i) => (
-          <PixelSprite key={i} kind={kind} color={t?.color || "#8fe39a"} size={size} />
-        ))}
+      <div className="bed-card-top">
+        <div className="crops">
+          {Array.from({ length: count }).map((_, i) => (
+            <PixelSprite key={i} kind={kind} color={t?.color || "#8fe39a"} size={size} />
+          ))}
+        </div>
+        <div className="bed-card-stats">
+          <div className="stat-num">{region.sunshine || 0}<span>m</span></div>
+          <div className="stat-num">{region.tended}<span>×</span></div>
+          {pendingMs > 0 && <div className="stat-num ms">{pendingMs}<span>🎯</span></div>}
+        </div>
       </div>
-      <span className="bed-label">{region.label} <em>{st.icon}</em> <StagePips stage={region.stage} /></span>
+      <div className="bed-card-bottom">
+        <span className="bed-card-name">{region.label} <em>{st.icon}</em></span>
+        <span className="bed-card-stage"><StagePips stage={region.stage} /></span>
+        {lastLog && (
+          <span className="bed-card-log">{LOG_ICON[lastLog.type] || "•"} {lastLog.text?.slice(0, 40)}</span>
+        )}
+      </div>
     </button>
   );
 }
@@ -268,19 +276,13 @@ export default function GardenScene({ regions, hover, selected, timerId, onHover
 
   return (
     <section className="field" onClick={() => onSelect(null)}>
-      {GRASS.map((g, i) => (
-        <span key={i} className="grass-deco" style={{ left: `${g.x}%`, top: `${g.y}%` }}>
-          <PixelSprite kind={g.k} color="#8fe39a" size={g.k === "daisy" ? 16 : 20} />
-        </span>
-      ))}
-
       {thirstyCount > 0 && (
         <div className="thirst-summary">💧 {thirstyCount} {thirstyCount === 1 ? "bed needs" : "beds need"} water</div>
       )}
 
-      <div className="garden-canvas" ref={plotRef} onClick={(e) => e.stopPropagation()}>
+      <div className="bed-grid" ref={plotRef} onClick={(e) => e.stopPropagation()}>
         {regions.map((r) => (
-          <Bed key={r.id} region={r} selected={selected}
+          <BedCard key={r.id} region={r} selected={selected}
             active={hover === r.id || selected === r.id}
             thirsty={needsWater(r.lastTs)}
             onHover={onHover} onSelect={onSelect} onStartTimer={onStartTimer}
