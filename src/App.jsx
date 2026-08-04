@@ -15,6 +15,8 @@ import DurationPicker from "./components/DurationPicker.jsx";
 import CountdownTimer from "./components/CountdownTimer.jsx";
 import BedForm from "./components/BedForm.jsx";
 import BedDetailPage from "./components/BedDetailPage.jsx";
+import LoginGate from "./components/LoginGate.jsx";
+import PublicPage from "./components/PublicPage.jsx";
 
 function getSettings() {
   try {
@@ -43,12 +45,22 @@ async function aiAnalyze(regions, settings) {
 }
 
 export default function App() {
+  const [admin, setAdmin] = useState(() => localStorage.getItem("vsg_admin") === "1");
   const [regions, setRegions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState(getSettings);
   const [showSettings, setShowSettings] = useState(false);
   const [aiInsight, setAiInsight] = useState(null);
   const aiRan = useRef(false);
+
+  const handleLogin = () => setAdmin(true);
+  const handleLogout = () => { localStorage.removeItem("vsg_admin"); setAdmin(false); };
+  const handleAdminFromPublic = () => {
+    if (!admin) {
+      localStorage.setItem("vsg_admin", "1");
+      setAdmin(true);
+    }
+  };
 
   const refetchRegions = useCallback(async () => {
     const data = await api.fetchRegions();
@@ -190,6 +202,10 @@ export default function App() {
     return <div className="app-min" style={{ display: "grid", placeItems: "center", color: "#6b6455" }}>loading…</div>;
   }
 
+  if (!admin) {
+    return <PublicPage onAdmin={handleAdminFromPublic} />;
+  }
+
   const NAV = [
     { id: "garden", icon: "🌱", label: "Garden" },
     { id: "day", icon: "🕐", label: "Day plan" },
@@ -222,6 +238,7 @@ export default function App() {
             </button>
           ))}
           <button className={showSettings ? "on" : ""} onClick={() => setShowSettings(true)} title="Settings">⚙</button>
+          <button onClick={handleLogout} title="Logout" className="nav-logout">⏻</button>
         </nav>
       </aside>
 

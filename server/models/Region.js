@@ -15,6 +15,16 @@ const milestoneSchema = new mongoose.Schema({
   doneTs: { type: Date, default: null },
 }, { _id: false });
 
+const plantSchema = new mongoose.Schema({
+  id: { type: String, required: true },
+  name: { type: String, required: true },
+  crop: { type: String, default: "leafy" },
+  stage: { type: String, enum: ["seed", "sprout", "growing", "flourishing"], default: "seed" },
+  growth: { type: Number, default: 0 },
+  notes: { type: String, default: "" },
+  fruits: [milestoneSchema],
+}, { _id: false });
+
 const regionSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
   label: { type: String, required: true },
@@ -32,6 +42,7 @@ const regionSchema = new mongoose.Schema({
   crop: { type: String, default: null },
   logs: [logSchema],
   milestones: [milestoneSchema],
+  plants: [plantSchema],
 }, { timestamps: true });
 
 export default mongoose.model("Region", regionSchema);

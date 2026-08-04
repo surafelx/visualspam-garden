@@ -22,15 +22,164 @@ function StagePips({ stage }) {
   return <span className="pips">{STAGE_ORDER.map((s, i) => <i key={s} className={i <= idx ? "on" : ""} />)}</span>;
 }
 
+function PlantCard({ plant, regionId, onAddFruit, onUpdateFruit, onToggleFruit, onDeleteFruit, onEditPlant, onDeletePlant }) {
+  const [fruitForm, setFruitForm] = useState(null);
+  const cropInfo = CROP_CHOICES.find((c) => c.id === plant.crop) || CROP_CHOICES[0];
+  const fruits = plant.fruits || [];
+  const pendingFruits = fruits.filter((f) => !f.done);
+  const doneFruits = fruits.filter((f) => f.done);
+  const pct = Math.round((plant.growth / GROWTH_PER_STAGE) * 100);
+
+  const handleFruitSave = (fruit) => {
+    if (fruitForm === "new") onAddFruit(regionId, plant.id, fruit);
+    else onUpdateFruit(regionId, plant.id, fruit);
+    setFruitForm(null);
+  };
+
+  return (
+    <div className="plant-card">
+      <div className="plant-head">
+        <div className="plant-sprite">
+          <PixelSprite kind={plant.crop || "leafy"} color="#8fe39a" size={36} />
+        </div>
+        <div className="plant-info">
+          <h3 className="plant-name">{plant.name}</h3>
+          <div className="plant-meta">
+            <span className="plant-crop">{cropInfo.label}</span>
+            <StagePips stage={plant.stage} />
+          </div>
+        </div>
+        <div className="plant-actions">
+          <button className="plant-edit-btn" onClick={() => onEditPlant(plant)} title="Edit plant">✎</button>
+          <button className="plant-del-btn" onClick={() => onDeletePlant(regionId, plant.id)} title="Delete plant">✕</button>
+        </div>
+      </div>
+
+      {plant.stage !== "flourishing" && (
+        <div className="plant-grow">
+          <div className="grow-bar"><i style={{ width: `${pct}%` }} /></div>
+          <span className="plant-grow-text">{plant.growth}/{GROWTH_PER_STAGE} growth</span>
+        </div>
+      )}
+      {plant.stage === "flourishing" && <div className="plant-flourishing">🌸 Flourishing</div>}
+
+      {plant.notes && <p className="plant-notes">{plant.notes}</p>}
+
+      <div className="fruits-section">
+        <div className="fruits-header">
+          <span className="fruits-title">🍊 Fruits ({pendingFruits.length} pending, {doneFruits.length} harvested)</span>
+          <button className="fruits-add-btn" onClick={() => setFruitForm("new")}>+ Add</button>
+        </div>
+
+        {fruits.length === 0 && <p className="fruits-empty">No fruits yet. Set a goal to harvest.</p>}
+
+        {pendingFruits.length > 0 && (
+          <ul className="fruits-list">
+            {pendingFruits.map((f) => {
+              const status = milestoneStatus(f);
+              const daysLeft = Math.ceil((new Date(f.deadline).getTime() - Date.now()) / 864e5);
+              return (
+                <li key={f.id} className={`fruit-item ${status}`}>
+                  <button className="fruit-check" onClick={() => onToggleFruit(regionId, plant.id, f.id)} />
+                  <div className="fruit-info">
+                    <span className="fruit-name">{f.title}</span>
+                    <span className={`fruit-deadline ${status}`}>
+                      {status === "overdue" ? `${Math.abs(daysLeft)}d overdue` :
+                       status === "soon" ? `${daysLeft}d left` :
+                       status === "done" ? "harvested ✓" : `due in ${daysLeft}d`}
+                    </span>
+                  </div>
+                  <button className="fruit-edit" onClick={() => setFruitForm(f)}>✎</button>
+                  <button className="fruit-del" onClick={() => onDeleteFruit(regionId, plant.id, f.id)}>✕</button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        {doneFruits.length > 0 && (
+          <ul className="fruits-list fruits-done-list">
+            {doneFruits.map((f) => (
+              <li key={f.id} className="fruit-item done">
+                <button className="fruit-check checked" onClick={() => onToggleFruit(regionId, plant.id, f.id)} />
+                <div className="fruit-info">
+                  <span className="fruit-name">{f.title}</span>
+                  <span className="fruit-deadline done">harvested</span>
+                </div>
+                <button className="fruit-del" onClick={() => onDeleteFruit(regionId, plant.id, f.id)}>✕</button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {fruitForm && (
+        <MilestoneForm
+          milestone={fruitForm === "new" ? null : fruitForm}
+          regionLabel={plant.name}
+          onSave={handleFruitSave}
+          onCancel={() => setFruitForm(null)}
+          labelPrefix="fruit"
+        />
+      )}
+    </div>
+  );
+}
+
+function PlantForm({ plant, regionLabel, onSave, onCancel }) {
+  const [name, setName] = useState(plant?.name || "");
+  const [crop, setCrop] = useState(plant?.crop || "leafy");
+  const [notes, setNotes] = useState(plant?.notes || "");
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    onSave({ ...plant, name: name.trim(), crop, notes });
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onCancel}>
+      <div className="modal plant-form" onClick={(e) => e.stopPropagation()}>
+        <button className="modal-close" onClick={onCancel}>✕</button>
+        <h2 className="ms-title">{plant ? "Edit" : "Add"} Plant in {regionLabel}</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="ms-field">
+            <label className="ms-label">Plant name</label>
+            <input className="ms-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Tomato #1" autoFocus />
+          </div>
+          <div className="ms-field">
+            <label className="ms-label">Crop type</label>
+            <div className="crop-swatches">
+              {CROP_CHOICES.map((c) => (
+                <button key={c.id} type="button" className={`swatch ${crop === c.id ? "on" : ""}`} title={c.label}
+                  onClick={() => setCrop(c.id)}>
+                  <PixelSprite kind={c.id} color="#8fe39a" size={22} />
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="ms-field">
+            <label className="ms-label">Notes</label>
+            <textarea className="ms-input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="optional notes…" />
+          </div>
+          <button type="submit" className="ms-save" disabled={!name.trim()}>{plant ? "Save" : "Add Plant"}</button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function BedDetailPage({ region, onBack, onWater, onNote, onSetCrop, onStartTimer, timerRunning,
   onAddMilestone, onUpdateMilestone, onToggleMilestone, onDeleteMilestone, onEditBed, onDeleteBed }) {
   const [msForm, setMsForm] = useState(null);
+  const [plantForm, setPlantForm] = useState(null);
   const [noteText, setNoteText] = useState("");
   const t = threadById[region.thread];
   const st = STAGES[region.stage];
   const thirsty = needsWater(region.lastTs);
   const current = region.crop || null;
   const milestones = region.milestones || [];
+  const plants = region.plants || [];
   const pendingMs = milestones.filter((m) => !m.done);
   const doneMs = milestones.filter((m) => m.done);
   const pct = Math.round((region.growth / GROWTH_PER_STAGE) * 100);
@@ -57,6 +206,30 @@ export default function BedDetailPage({ region, onBack, onWater, onNote, onSetCr
     setNoteText("");
   };
 
+  const handleAddPlant = async (plant) => {
+    try { await api.addPlant(region.id, plant); } catch (e) { console.error(e); }
+    setPlantForm(null);
+  };
+  const handleEditPlant = async (plant) => {
+    try { await api.updatePlant(region.id, plant.id, plant); } catch (e) { console.error(e); }
+    setPlantForm(null);
+  };
+  const handleDeletePlant = async (regionId, plantId) => {
+    try { await api.deletePlant(regionId, plantId); } catch (e) { console.error(e); }
+  };
+  const handleAddFruit = async (regionId, plantId, fruit) => {
+    try { await api.addFruit(regionId, plantId, fruit); } catch (e) { console.error(e); }
+  };
+  const handleUpdateFruit = async (regionId, plantId, fruit) => {
+    try { await api.updateFruit(regionId, plantId, fruit.id, fruit); } catch (e) { console.error(e); }
+  };
+  const handleToggleFruit = async (regionId, plantId, fruitId) => {
+    try { await api.updateFruit(regionId, plantId, fruitId, { done: true, doneTs: new Date().toISOString() }); } catch (e) { console.error(e); }
+  };
+  const handleDeleteFruit = async (regionId, plantId, fruitId) => {
+    try { await api.deleteFruit(regionId, plantId, fruitId); } catch (e) { console.error(e); }
+  };
+
   const genIcs = () => {
     const lines = [
       "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//VisualSpam Garden//Bed//EN",
@@ -66,6 +239,13 @@ export default function BedDetailPage({ region, onBack, onWater, onNote, onSetCr
       const d = new Date(ms.deadline);
       const dt = d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
       lines.push("BEGIN:VEVENT", `DTSTART:${dt}`, `DTEND:${dt}`, `SUMMARY:${ms.title}`, `DESCRIPTION:Bed: ${region.label} — ${st.label}`, "END:VEVENT");
+    });
+    plants.forEach((p) => {
+      (p.fruits || []).filter((f) => !f.done && f.deadline).forEach((f) => {
+        const d = new Date(f.deadline);
+        const dt = d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+        lines.push("BEGIN:VEVENT", `DTSTART:${dt}`, `DTEND:${dt}`, `SUMMARY:[${p.name}] ${f.title}`, `DESCRIPTION:Plant: ${p.name} in ${region.label}`, "END:VEVENT");
+      });
     });
     lines.push("END:VCALENDAR");
     const blob = new Blob([lines.join("\r\n")], { type: "text/calendar" });
@@ -168,11 +348,11 @@ export default function BedDetailPage({ region, onBack, onWater, onNote, onSetCr
         <div className="bdp-col bdp-right">
           <div className="bdp-card">
             <div className="bdp-card-head">
-              🎯 Milestones
+              🎯 Bed Milestones
               <button className="ms-add-btn" onClick={() => setMsForm("new")}>+ Add</button>
             </div>
             {milestones.length === 0 && (
-              <p className="ms-empty">No milestones yet. Set goals with deadlines.</p>
+              <p className="ms-empty">No bed-level milestones yet.</p>
             )}
             {pendingMs.length > 0 && (
               <ul className="ms-list">
@@ -204,16 +384,30 @@ export default function BedDetailPage({ region, onBack, onWater, onNote, onSetCr
                     <button className="ms-check checked" onClick={() => onToggleMilestone(region.id, ms.id)} />
                     <div className="ms-info">
                       <span className="ms-name">{ms.title}</span>
-                      <span className="ms-deadline done">completed</span>
+                      <span className="ms-deadline done">done ✓</span>
                     </div>
                     <button className="ms-del" onClick={() => onDeleteMilestone(region.id, ms.id)}>✕</button>
                   </li>
                 ))}
               </ul>
             )}
-            {milestones.length > 0 && (
-              <button className="bdp-ics-btn" onClick={genIcs}>📅 Export to Calendar (.ics)</button>
+            <button className="bdp-ics-btn" onClick={genIcs}>📅 Export to Calendar (.ics)</button>
+          </div>
+
+          <div className="bdp-card">
+            <div className="bdp-card-head">
+              🌿 Plants ({plants.length})
+              <button className="ms-add-btn" onClick={() => setPlantForm("new")}>+ Add Plant</button>
+            </div>
+            {plants.length === 0 && (
+              <p className="ms-empty">No plants in this bed yet. Add plants to grow fruits.</p>
             )}
+            {plants.map((p) => (
+              <PlantCard key={p.id} plant={p} regionId={region.id}
+                onAddFruit={handleAddFruit} onUpdateFruit={handleUpdateFruit}
+                onToggleFruit={handleToggleFruit} onDeleteFruit={handleDeleteFruit}
+                onEditPlant={(pl) => setPlantForm(pl)} onDeletePlant={handleDeletePlant} />
+            ))}
           </div>
 
           <div className="bdp-card">
@@ -269,6 +463,15 @@ export default function BedDetailPage({ region, onBack, onWater, onNote, onSetCr
           regionLabel={region.label}
           onSave={handleMsSave}
           onCancel={() => setMsForm(null)}
+        />
+      )}
+
+      {plantForm && (
+        <PlantForm
+          plant={plantForm === "new" ? null : plantForm}
+          regionLabel={region.label}
+          onSave={plantForm === "new" ? handleAddPlant : handleEditPlant}
+          onCancel={() => setPlantForm(null)}
         />
       )}
     </section>

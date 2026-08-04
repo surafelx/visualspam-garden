@@ -27,3 +27,13 @@ export const deleteMilestone = (regionId, msId) => request(`/regions/${regionId}
 // ── Analysis ──
 export const analyzeAll = () => request("/regions/all/analyze");
 export const analyzeBed = (id) => request(`/regions/${id}/analyze`);
+
+// ── Plants (sub-plants within a bed) ──
+export const addPlant = (regionId, plant) => request(`/regions/${regionId}/plants`, { method: "POST", body: plant });
+export const updatePlant = (regionId, plantId, data) => request(`/regions/${regionId}/plants/${plantId}`, { method: "PUT", body: data });
+export const deletePlant = (regionId, plantId) => request(`/regions/${regionId}/plants/${plantId}`, { method: "DELETE" });
+
+// ── Fruits (milestones on a specific plant) ──
+export const addFruit = (regionId, plantId, fruit) => request(`/regions/${regionId}/plants/${plantId}/fruits`, { method: "POST", body: fruit });
+export const updateFruit = (regionId, plantId, fruitId, data) => request(`/regions/${regionId}/plants/${plantId}/fruits/${fruitId}`, { method: "PUT", body: data });
+export const deleteFruit = (regionId, plantId, fruitId) => request(`/regions/${regionId}/plants/${plantId}/fruits/${fruitId}`, { method: "DELETE" });

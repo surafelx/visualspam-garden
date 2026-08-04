@@ -33,12 +33,15 @@ export default function Library() {
           const t = threadById[a.thread];
           return (
             <button key={a.id} className="book" style={{ "--rc": t?.color }} onClick={() => setOpenId(a.id)}>
-              <div className="book-kind">{a.kind}</div>
-              <div className="book-title">{a.title}</div>
-              <div className="book-excerpt">{a.excerpt}</div>
-              <div className="book-foot">
-                <span className="thread-dot" style={{ background: t?.color }} />
-                {t?.name} · {a.minutes} min
+              <div className="book-accent" style={{ background: t?.color }} />
+              <div className="book-body">
+                <div className="book-kind">{a.kind}</div>
+                <div className="book-title">{a.title}</div>
+                <div className="book-excerpt">{a.excerpt}</div>
+                <div className="book-foot">
+                  <span className="thread-dot" style={{ background: t?.color }} />
+                  {t?.name} · {a.minutes} min
+                </div>
               </div>
             </button>
           );

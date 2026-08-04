@@ -198,4 +198,68 @@ router.delete("/:id/milestones/:msId", w(async (req, res) => {
   res.json(region);
 }));
 
+// ── Plants (sub-plants within a bed, each with their own fruits) ──
+router.post("/:id/plants", w(async (req, res) => {
+  const region = await Region.findOne({ id: req.params.id });
+  if (!region) return res.status(404).json({ error: "not found" });
+  const plant = { id: `plant_${Date.now()}`, fruits: [], ...req.body };
+  if (!region.plants) region.plants = [];
+  region.plants.push(plant);
+  await region.save();
+  res.status(201).json(region);
+}));
+
+router.put("/:id/plants/:plantId", w(async (req, res) => {
+  const region = await Region.findOne({ id: req.params.id });
+  if (!region) return res.status(404).json({ error: "not found" });
+  const plant = (region.plants || []).find((p) => p.id === req.params.plantId);
+  if (!plant) return res.status(404).json({ error: "plant not found" });
+  Object.assign(plant, req.body);
+  await region.save();
+  res.json(region);
+}));
+
+router.delete("/:id/plants/:plantId", w(async (req, res) => {
+  const region = await Region.findOne({ id: req.params.id });
+  if (!region) return res.status(404).json({ error: "not found" });
+  region.plants = (region.plants || []).filter((p) => p.id !== req.params.plantId);
+  await region.save();
+  res.json(region);
+}));
+
+// ── Fruits (milestones on a specific plant within a bed) ──
+router.post("/:id/plants/:plantId/fruits", w(async (req, res) => {
+  const region = await Region.findOne({ id: req.params.id });
+  if (!region) return res.status(404).json({ error: "not found" });
+  const plant = (region.plants || []).find((p) => p.id === req.params.plantId);
+  if (!plant) return res.status(404).json({ error: "plant not found" });
+  const fruit = { id: `fruit_${Date.now()}`, ...req.body };
+  if (!plant.fruits) plant.fruits = [];
+  plant.fruits.push(fruit);
+  await region.save();
+  res.status(201).json(region);
+}));
+
+router.put("/:id/plants/:plantId/fruits/:fruitId", w(async (req, res) => {
+  const region = await Region.findOne({ id: req.params.id });
+  if (!region) return res.status(404).json({ error: "not found" });
+  const plant = (region.plants || []).find((p) => p.id === req.params.plantId);
+  if (!plant) return res.status(404).json({ error: "plant not found" });
+  const fruit = (plant.fruits || []).find((f) => f.id === req.params.fruitId);
+  if (!fruit) return res.status(404).json({ error: "fruit not found" });
+  Object.assign(fruit, req.body);
+  await region.save();
+  res.json(region);
+}));
+
+router.delete("/:id/plants/:plantId/fruits/:fruitId", w(async (req, res) => {
+  const region = await Region.findOne({ id: req.params.id });
+  if (!region) return res.status(404).json({ error: "not found" });
+  const plant = (region.plants || []).find((p) => p.id === req.params.plantId);
+  if (!plant) return res.status(404).json({ error: "plant not found" });
+  plant.fruits = (plant.fruits || []).filter((f) => f.id !== req.params.fruitId);
+  await region.save();
+  res.json(region);
+}));
+
 export default router;
