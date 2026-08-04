@@ -19,10 +19,14 @@ app.use("/api/regions", regionsRouter);
 app.use("/api/checkins", checkinsRouter);
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 
-// In production, serve the built client (single-service hosting). The Vite build
-// outputs to ../dist. Skipped automatically in dev (no dist).
-const clientDist = path.join(__dirname, "..", "dist");
-if (fs.existsSync(clientDist)) {
+// In production, serve the built client. Checks both ../dist (monorepo) and
+// ./dist (independent server deployment). Set SERVE_CLIENT=false to skip.
+const serveClient = process.env.SERVE_CLIENT !== "false";
+const clientDist = fs.existsSync(path.join(__dirname, "dist"))
+  ? path.join(__dirname, "dist")
+  : path.join(__dirname, "..", "dist");
+
+if (serveClient && fs.existsSync(clientDist)) {
   app.use(express.static(clientDist));
   app.get(/^(?!\/api).*/, (req, res) => res.sendFile(path.join(clientDist, "index.html")));
 }

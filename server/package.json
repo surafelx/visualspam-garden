@@ -5,6 +5,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
+    "build": "cd .. && npm install && npm run build && cp -r dist server/dist",
     "seed": "node seed.js"
   },
   "dependencies": {

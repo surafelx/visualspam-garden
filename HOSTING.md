@@ -12,6 +12,7 @@ API server also serves the built client, so it deploys as **one service**.
 - `PORT` — port to listen on (default `4000`)
 - `VITE_API_URL` *(client build, optional)* — only if the API is on a different
   origin than the client. Left unset, the client calls same-origin `/api`.
+- `SERVE_CLIENT` — set to `false` to skip serving client files (for independent API hosting)
 
 ## One-service deploy (recommended)
 ```bash
@@ -22,6 +23,18 @@ MONGO_URI=<your-uri> npm start      # server serves ./dist AND /api on $PORT
 ```
 Then point your host (Render/Railway/Fly/VPS) at `npm start` with `MONGO_URI` set.
 Seed initial garden data once with `npm run seed`.
+
+## Independent API hosting (Render)
+Deploy only the `server/` directory as a separate service:
+
+1. Create a new Web Service on Render
+2. Point to the `server/` directory in your repo
+3. Set build command: `npm install`
+4. Set start command: `npm start`
+5. Add environment variable: `MONGO_URI=<your-atlas-uri>`
+6. Add environment variable: `SERVE_CLIENT=false`
+
+The API will be available at `https://your-service.onrender.com/api`.
 
 ## Local development
 ```bash
