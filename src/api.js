@@ -23,3 +23,7 @@ export const deleteRegion = (id) => request(`/regions/${id}`, { method: "DELETE"
 export const addMilestone = (regionId, milestone) => request(`/regions/${regionId}/milestones`, { method: "POST", body: milestone });
 export const updateMilestone = (regionId, msId, data) => request(`/regions/${regionId}/milestones/${msId}`, { method: "PUT", body: data });
 export const deleteMilestone = (regionId, msId) => request(`/regions/${regionId}/milestones/${msId}`, { method: "DELETE" });
+
+// ── Analysis ──
+export const analyzeAll = () => request("/regions/analyze/all");
+export const analyzeBed = (id) => request(`/regions/${id}/analyze`);

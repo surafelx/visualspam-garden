@@ -682,7 +682,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
   box-shadow: 0 12px 30px -16px rgba(20, 40, 15, 0.5) !important;
 }
 .now-float .now-time { flex-direction: column; align-items: flex-start; gap: 2px; margin-bottom: 12px; }
-.now-float .now-clock { font-size: 2rem; line-height: 1; color: #2b2820; }
+.now-float .now-clock { font-size: 3rem; line-height: 1; color: #2b2820; letter-spacing: 0.02em; }
 .now-float .now-date { font-size: 0.72rem; color: #8a8471; letter-spacing: 0.02em; }
 .now-float .now-next { gap: 0; }
 .now-float .now-next li { padding: 5px 6px; font-size: 0.76rem; border-radius: 7px; }
@@ -740,3 +740,36 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 }
 .detail-edit-btn:hover { color: #2c2920; background: #ebe6d7; }
 .detail-del-btn:hover { color: #c0392b; background: #f5e0e0; }
+
+/* ── garden analysis modal ── */
+.analysis-modal { max-width: 520px; max-height: 85vh; overflow-y: auto; }
+.analysis-loading { text-align: center; padding: 40px; color: #857c69; font-size: 0.95rem; }
+.analysis-score-bar { height: 10px; border-radius: 5px; background: #ece7d8; margin: 12px 0 18px; overflow: hidden; }
+.analysis-score-fill { height: 100%; border-radius: 5px; transition: width 0.5s ease; }
+.analysis-section { margin-bottom: 18px; }
+.analysis-section-title { font-size: 0.82rem; color: #857c69; margin: 0 0 8px; font-weight: 500; }
+.analysis-rec {
+  display: flex; align-items: baseline; gap: 8px; padding: 8px 10px; border-radius: 8px;
+  font-size: 0.82rem; background: #f1ede1; margin-bottom: 4px;
+}
+.analysis-rec.high { background: #fde8e8; }
+.analysis-rec-icon { flex: 0 0 auto; }
+.analysis-rec-bed { flex: 0 0 auto; font-weight: 600; color: #2c2920; }
+.analysis-rec-text { flex: 1 1 auto; color: #4a463c; }
+.analysis-bed { padding: 12px 0; border-bottom: 1px solid #e6e0d0; }
+.analysis-bed:last-child { border-bottom: none; }
+.analysis-bed-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.analysis-bed-name { font-size: 0.88rem; font-weight: 600; color: #2c2920; }
+.analysis-bed-score { font-size: 1.1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.analysis-bed-bar { height: 6px; border-radius: 3px; background: #ece7d8; margin-bottom: 6px; overflow: hidden; }
+.analysis-bed-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+.analysis-bed-insight { font-size: 0.78rem; color: #6a6355; line-height: 1.5; margin: 0 0 6px; }
+.analysis-bed-recs { display: flex; flex-direction: column; gap: 3px; }
+.analysis-bed-recs .analysis-rec { padding: 5px 8px; font-size: 0.76rem; background: #f7f5ee; }
+
+/* ── analyze button in garden footer ── */
+.analyze-btn {
+  padding: 6px 14px; border-radius: 8px; font-family: inherit; font-size: 0.76rem;
+  color: #4c9a63; background: #e6f2e4; transition: background 0.12s, transform 0.1s;
+}
+.analyze-btn:hover { background: #dcecd9; transform: translateY(-1px); }

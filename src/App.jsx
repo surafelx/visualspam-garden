@@ -13,6 +13,7 @@ import DaySchedule from "./components/DaySchedule.jsx";
 import DurationPicker from "./components/DurationPicker.jsx";
 import CountdownTimer from "./components/CountdownTimer.jsx";
 import BedForm from "./components/BedForm.jsx";
+import GardenAnalysis from "./components/GardenAnalysis.jsx";
 
 export default function App() {
   const [regions, setRegions] = useState([]);
@@ -142,6 +143,7 @@ export default function App() {
   // bed form: null | "new" | region object
   const [bedForm, setBedForm] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [showAnalysis, setShowAnalysis] = useState(false);
 
   const createBed = async (bed) => {
     try {
@@ -257,6 +259,7 @@ export default function App() {
             onDeleteMilestone={deleteMilestone}
             onEditBed={(bed) => setBedForm(bed)}
             onDeleteBed={(id) => setConfirmDelete(id)}
+            onAnalyze={() => setShowAnalysis(true)}
           />
         ) : view === "day" ? (
           <DaySchedule regions={regions} />
@@ -333,6 +336,7 @@ export default function App() {
           </div>
         </div>
       )}
+      {showAnalysis && <GardenAnalysis onClose={() => setShowAnalysis(false)} />}
     </div>
   );
 }
