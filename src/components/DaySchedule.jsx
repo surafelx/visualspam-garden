@@ -17,8 +17,10 @@ function buildICS(slots, byId, date) {
     const ms = bed?.milestones?.find((m) => m.id === slot?.milestoneId);
     const title = bed ? `${bed.label}${ms ? ` — ${ms.name}` : slot.text ? ` — ${slot.text}` : ""}` : (slot?.text || "");
     if (!title.trim()) return;
+    const endH = Math.min(h + (slot.hours || 1), 24);
+    const dtend = endH >= 24 ? `${ymd}T235900` : `${ymd}T${p(endH)}0000`;
     lines.push("BEGIN:VEVENT", `UID:vsg-${ymd}-${h}@visualspam`, `DTSTAMP:${stamp}`,
-      `DTSTART:${ymd}T${p(h)}0000`, `DTEND:${ymd}T${p(Math.min(h + 1, 23))}0000`,
+      `DTSTART:${ymd}T${p(h)}0000`, `DTEND:${dtend}`,
       `SUMMARY:🌱 ${esc(title)}`, "END:VEVENT");
   });
   lines.push("END:VCALENDAR");
@@ -46,6 +48,13 @@ export default function DaySchedule({ regions = [] }) {
   const clear = (h) => { const n = { ...slots }; delete n[h]; save(n); };
 
   const planned = Object.values(slots).filter((s) => s && (s.bedId || (s.text && s.text.trim()))).length;
+
+  // hours spanned by a longer task → the hour it continues from
+  const coverage = {};
+  Object.entries(slots).forEach(([hs, s]) => {
+    const h0 = Number(hs);
+    for (let k = 1; k < (s?.hours || 1); k++) if (h0 + k < 24) coverage[h0 + k] = h0;
+  });
 
   const syncToCalendar = () => {
     const ics = buildICS(slots, byId, new Date());
@@ -83,6 +92,23 @@ export default function DaySchedule({ regions = [] }) {
           const ms = bed?.milestones?.find((m) => m.id === slot?.milestoneId);
           const editing = active === h;
           const filled = !!(slot && (bed || (slot.text && slot.text.trim())));
+          const hours = slot?.hours || 1;
+
+          // this hour is spanned by a longer task above it → show a continuation
+          if (coverage[h] != null && !filled && active !== h) {
+            const ps = slots[coverage[h]];
+            const pb = ps?.bedId ? byId[ps.bedId] : null;
+            const pt = pb ? threadById[pb.thread] : null;
+            return (
+              <li key={h} className={`slot cont ${h === nowH ? "now" : ""}`}>
+                <span className="slot-time">{fmtHour(h)}</span>
+                <span className="slot-cont" onClick={() => setActive(coverage[h])}>
+                  {pt && <span className="slot-dot" style={{ background: pt.color }} />}
+                  <i>↑ {pb ? pb.label : "continues"}</i>
+                </span>
+              </li>
+            );
+          }
 
           return (
             <li key={h} className={`slot ${h === nowH ? "now" : ""} ${filled ? "filled" : ""} ${editing ? "editing" : ""}`}>
@@ -96,6 +122,7 @@ export default function DaySchedule({ regions = [] }) {
                       {bed && <b>{bed.label}</b>}
                       {ms ? <span className="slot-what">🎯 {ms.name}</span>
                         : slot.text ? <span className="slot-what">{slot.text}</span> : null}
+                      {hours > 1 && <span className="slot-dur">{fmtHour(h)}–{h + hours >= 24 ? "24:00" : fmtHour(h + hours)}</span>}
                     </>
                   ) : (
                     <span className="slot-empty">+ plan this hour</span>
@@ -135,6 +162,14 @@ export default function DaySchedule({ regions = [] }) {
                     onChange={(e) => patch(h, { text: e.target.value })}
                     onKeyDown={(e) => e.key === "Enter" && setActive(null)}
                     placeholder="what will you do…" />
+
+                  <div className="pick-row dur-row">
+                    <span className="pick-label">duration</span>
+                    <button className="dur-btn" onClick={() => patch(h, { hours: Math.max(1, hours - 1) })} disabled={hours <= 1}>−</button>
+                    <span className="dur-val">{hours}h</span>
+                    <button className="dur-btn" onClick={() => patch(h, { hours: Math.min(24 - h, hours + 1) })} disabled={h + hours >= 24}>+</button>
+                    <span className="dur-until">{hours > 1 ? `until ${h + hours >= 24 ? "24:00" : fmtHour(h + hours)}` : ""}</span>
+                  </div>
 
                   <div className="editor-actions">
                     <button className="ed-done" onClick={() => setActive(null)}>done</button>

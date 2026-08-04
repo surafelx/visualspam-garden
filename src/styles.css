@@ -655,3 +655,16 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
   margin-top: 6px; padding: 4px 6px; text-align: left; background: none; color: #6d8a5f; font-size: 0.72rem;
 }
 .now-float .now-plan-btn:hover { background: none; color: #4c9a63; text-decoration: underline; }
+
+/* ── day plan: extendable duration + continuation rows ── */
+.slot-dur { flex: 0 0 auto; margin-left: auto; font-size: 0.72rem; color: #a39a86; font-variant-numeric: tabular-nums; }
+.slot.cont { opacity: 0.85; }
+.slot-cont { flex: 1 1 auto; display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 0.82rem; color: #9aa088; cursor: pointer; border-radius: 8px; }
+.slot-cont:hover { background: #eef1e6; }
+.slot-cont i { font-style: normal; }
+.dur-row { align-items: center; gap: 8px; }
+.dur-btn { width: 26px; height: 26px; border-radius: 7px; font-size: 1rem; line-height: 1; color: #4a463c; background: #fff; border: 1px solid #ddd6c4; }
+.dur-btn:hover:not(:disabled) { border-color: #8fd39a; }
+.dur-btn:disabled { opacity: 0.4; cursor: default; }
+.dur-val { min-width: 30px; text-align: center; font-size: 0.85rem; color: #2c2920; font-variant-numeric: tabular-nums; }
+.dur-until { font-size: 0.72rem; color: #a39a86; }
