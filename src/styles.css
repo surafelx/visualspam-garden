@@ -642,7 +642,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 /* ── now widget (right rail top): clock + next 3 hours ── */
 .now-widget { background: #eef1e6; border: 1px solid #dfe3d6; border-radius: 14px; padding: 12px; margin-bottom: 14px; }
 .now-time { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
-.now-clock { font-size: 1.7rem; color: #2c2920; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
+.now-clock { font-size: 2.2rem; color: #2c2920; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
 .now-date { font-size: 0.72rem; color: #857c69; }
 .now-next { list-style: none; display: flex; flex-direction: column; gap: 2px; }
 .now-next li { display: flex; align-items: center; gap: 8px; padding: 6px 7px; border-radius: 8px; font-size: 0.78rem; color: #4a463c; cursor: pointer; }
