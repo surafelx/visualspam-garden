@@ -15,7 +15,7 @@ function buildICS(slots, byId, date) {
     const h = Number(hStr);
     const bed = slot?.bedId ? byId[slot.bedId] : null;
     const ms = bed?.milestones?.find((m) => m.id === slot?.milestoneId);
-    const title = bed ? `${bed.label}${ms ? ` — ${ms.name}` : slot.text ? ` — ${slot.text}` : ""}` : (slot?.text || "");
+    const title = bed ? `${bed.label}${ms ? ` — ${ms.title}` : slot.text ? ` — ${slot.text}` : ""}` : (slot?.text || "");
     if (!title.trim()) return;
     const endH = Math.min(h + (slot.hours || 1), 24);
     const dtend = endH >= 24 ? `${ymd}T235900` : `${ymd}T${p(endH)}0000`;
@@ -120,7 +120,7 @@ export default function DaySchedule({ regions = [] }) {
                     <>
                       {t && <span className="slot-dot" style={{ background: t.color }} />}
                       {bed && <b>{bed.label}</b>}
-                      {ms ? <span className="slot-what">🎯 {ms.name}</span>
+                      {ms ? <span className="slot-what">🎯 {ms.title}</span>
                         : slot.text ? <span className="slot-what">{slot.text}</span> : null}
                       {hours > 1 && <span className="slot-dur">{fmtHour(h)}–{h + hours >= 24 ? "24:00" : fmtHour(h + hours)}</span>}
                     </>
@@ -149,7 +149,7 @@ export default function DaySchedule({ regions = [] }) {
                       {bed.milestones.filter((m) => !m.done).map((m) => (
                         <button key={m.id} className={`ms-chip ${slot?.milestoneId === m.id ? "on" : ""}`}
                           onClick={() => patch(h, { milestoneId: slot?.milestoneId === m.id ? null : m.id })}>
-                          🎯 {m.name}
+                          🎯 {m.title}
                         </button>
                       ))}
                     </div>
