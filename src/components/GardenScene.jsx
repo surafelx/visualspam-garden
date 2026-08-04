@@ -14,13 +14,6 @@ function cropSprite(r) {
   return r.crop || CROP[r.thread] || "leafy";
 }
 
-const GRASS = [
-  { x: 5, y: 10, k: "daisy" }, { x: 12, y: 35, k: "tuft" }, { x: 8, y: 65, k: "daisy" },
-  { x: 88, y: 15, k: "tuft" }, { x: 92, y: 48, k: "daisy" }, { x: 85, y: 78, k: "tuft" },
-  { x: 28, y: 6, k: "daisy" }, { x: 64, y: 5, k: "tuft" }, { x: 48, y: 92, k: "daisy" },
-  { x: 18, y: 88, k: "tuft" }, { x: 76, y: 90, k: "daisy" },
-];
-
 function StagePips({ stage }) {
   const idx = STAGE_ORDER.indexOf(stage);
   return <span className="pips">{STAGE_ORDER.map((s, i) => <i key={s} className={i <= idx ? "on" : ""} />)}</span>;
@@ -28,7 +21,54 @@ function StagePips({ stage }) {
 
 const LOG_ICON = { water: "💧", note: "✎", grow: "🌸", sun: "☀️", checkin: "🌱" };
 
-function Detail({ region, onClose, onWater, onNote, onSetCrop, onStartTimer, timerRunning,
+function BedCard({ region, onSelect, onStartTimer }) {
+  const t = threadById[region.thread];
+  const st = STAGES[region.stage];
+  const kind = cropSprite(region);
+  const thirsty = needsWater(region.lastTs);
+  const pct = Math.round((region.growth / GROWTH_PER_STAGE) * 100);
+  const plants = region.plants || [];
+  const milestones = region.milestones || [];
+  const pendingFruits = plants.reduce((n, p) => n + (p.fruits || []).filter((f) => !f.done).length, 0);
+  const doneFruits = plants.reduce((n, p) => n + (p.fruits || []).filter((f) => f.done).length, 0);
+  const pendingMs = milestones.filter((m) => !m.done).length;
+  const lastLog = (region.logs || [])[0];
+  const spriteSize = region.id === "rest" ? 56 : region.stage === "flourishing" ? 44 : region.stage === "seed" ? 32 : 38;
+  const count = region.id === "rest" ? 1 : 3;
+
+  return (
+    <button className="g-card" style={{ "--rc": t?.color }} onClick={() => onSelect(region.id)}>
+      {thirsty && <span className="g-card-thirst">💧</span>}
+      <div className="g-card-top">
+        <div className="g-card-sprites">
+          {Array.from({ length: count }).map((_, i) => (
+            <PixelSprite key={i} kind={kind} color={t?.color || "#8fe39a"} size={spriteSize} />
+          ))}
+        </div>
+        <button className="g-card-sun" title="Give sunshine" onClick={(e) => { e.stopPropagation(); onStartTimer(region.id); }}>☀️</button>
+      </div>
+      <div className="g-card-mid">
+        <div className="g-card-name">{region.label}</div>
+        <div className="g-card-stage">{st.icon} {st.label} <StagePips stage={region.stage} /></div>
+      </div>
+      {region.stage !== "flourishing" && (
+        <div className="g-bar"><i style={{ width: `${pct}%` }} /></div>
+      )}
+      <div className="g-card-stats">
+        <span>☀️ {region.sunshine || 0}m</span>
+        <span>🌿 {region.tended}×</span>
+        {plants.length > 0 && <span>🌱 {plants.length}</span>}
+        {(pendingFruits + pendingMs) > 0 && <span className="g-card-fruits">🍊 {pendingFruits + pendingMs}</span>}
+        {doneFruits > 0 && <span className="g-card-harvested">✓ {doneFruits}</span>}
+      </div>
+      {lastLog && (
+        <div className="g-card-log">{LOG_ICON[lastLog.type] || "•"} {lastLog.text?.slice(0, 50)}</div>
+      )}
+    </button>
+  );
+}
+
+function BedDetail({ region, onClose, onWater, onNote, onSetCrop, onStartTimer, timerRunning,
   onAddMilestone, onUpdateMilestone, onToggleMilestone, onDeleteMilestone, onEditBed, onDeleteBed }) {
   const [text, setText] = useState("");
   const [msForm, setMsForm] = useState(null);
@@ -49,7 +89,7 @@ function Detail({ region, onClose, onWater, onNote, onSetCrop, onStartTimer, tim
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="detail-modal" onClick={(e) => e.stopPropagation()} style={{ "--rc": t?.color }}>
+      <div className="detail-modal" onClick={(e) => e.stopPropagation()}>
         <button className="detail-close" onClick={onClose}>✕</button>
         <div className="detail-head">
           <span className="detail-icon">{t?.icon}</span>
@@ -74,7 +114,6 @@ function Detail({ region, onClose, onWater, onNote, onSetCrop, onStartTimer, tim
           <span>☀️ {region.sunshine || 0}m of sunshine</span>
           <span className={thirsty ? "thirsty" : ""}>💧 last watered {timeAgo(region.lastTs)}{thirsty ? " · needs water" : ""}</span>
         </div>
-
         {region.id !== "rest" && (
           <div className="crop-picker">
             <span className="crop-picker-label">grows</span>
@@ -88,15 +127,12 @@ function Detail({ region, onClose, onWater, onNote, onSetCrop, onStartTimer, tim
             </div>
           </div>
         )}
-
         <div className="ms-section">
           <div className="ms-header">
             <span className="ms-section-title">🎯 Milestones</span>
             <button className="ms-add-btn" onClick={() => setMsForm("new")}>+ Add</button>
           </div>
-          {milestones.length === 0 && (
-            <p className="ms-empty">No milestones yet. Set a goal with a deadline.</p>
-          )}
+          {milestones.length === 0 && <p className="ms-empty">No milestones yet.</p>}
           {pendingMs.length > 0 && (
             <ul className="ms-list">
               {pendingMs.map((ms) => {
@@ -135,17 +171,15 @@ function Detail({ region, onClose, onWater, onNote, onSetCrop, onStartTimer, tim
             </ul>
           )}
         </div>
-
+        <div className="log-add">
+          <input value={text} onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submitNote()} placeholder="log what you did — this waters the bed" />
+          <button onClick={submitNote} disabled={!text.trim()}>Add</button>
+        </div>
         <div className="detail-actions">
-          <button className="btn-water" onClick={() => onWater(region.id)}>💧 Water</button>
           <button className="btn-sun" disabled={timerRunning} onClick={() => onStartTimer(region.id)}>
             {timerRunning ? "☀️ giving…" : "☀️ Sunshine"}
           </button>
-        </div>
-        <div className="log-add">
-          <input value={text} onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && submitNote()} placeholder="log what you did here…" />
-          <button onClick={submitNote} disabled={!text.trim()}>Add</button>
         </div>
         {region.logs.length > 0 && (
           <ul className="log-list">
@@ -156,69 +190,11 @@ function Detail({ region, onClose, onWater, onNote, onSetCrop, onStartTimer, tim
           </ul>
         )}
       </div>
-
       {msForm && (
-        <MilestoneForm
-          milestone={msForm === "new" ? null : msForm}
-          regionLabel={region.label}
-          onSave={handleMsSave}
-          onCancel={() => setMsForm(null)}
-        />
+        <MilestoneForm milestone={msForm === "new" ? null : msForm} regionLabel={region.label}
+          onSave={handleMsSave} onCancel={() => setMsForm(null)} />
       )}
     </div>
-  );
-}
-
-function BedTooltip({ region }) {
-  const t = threadById[region.thread];
-  const st = STAGES[region.stage];
-  const milestones = region.milestones || [];
-  const done = milestones.filter((m) => m.done).length;
-  const total = milestones.length;
-  const pct = Math.round((region.growth / GROWTH_PER_STAGE) * 100);
-  return (
-    <div className="bed-tooltip" style={{ "--rc": t?.color }}>
-      <div className="tt-row tt-head">
-        <span className="tt-icon">{st.icon}</span>
-        <span className="tt-stage">{st.label}</span>
-        <span className="tt-pct">{pct}%</span>
-      </div>
-      <div className="tt-bar"><i style={{ width: `${pct}%` }} /></div>
-      <div className="tt-row">
-        <span>☀️ {region.sunshine || 0}m</span>
-        <span>🌿 {region.tended}× tended</span>
-      </div>
-      {total > 0 && (
-        <div className="tt-row"><span>🎯 {done}/{total} milestones</span></div>
-      )}
-      <div className="tt-row tt-note">{timeAgo(region.lastTs)}</div>
-    </div>
-  );
-}
-
-function Bed({ region, active, thirsty, onHover, onSelect, selected, onStartTimer }) {
-  const t = threadById[region.thread];
-  const st = STAGES[region.stage];
-  const kind = cropSprite(region);
-  const count = region.id === "rest" ? 1 : 3;
-  const size = region.id === "rest" ? 64 : region.stage === "flourishing" ? 40 : region.stage === "seed" ? 30 : 36;
-
-  return (
-    <button
-      className={`bed stage-${region.stage} ${active ? "on" : ""} ${thirsty ? "thirsty" : ""}`}
-      style={{ "--rc": t?.color, left: `${region.x}%`, top: `${region.y}%` }}
-      onMouseEnter={() => onHover(region.id)} onMouseLeave={() => onHover(null)}
-      onClick={(e) => { e.stopPropagation(); onSelect(region.id === selected ? null : region.id); }}>
-      {thirsty && <span className="thirst-badge" title="needs water">💧</span>}
-      <button className="bed-sun-btn" title="Give sunshine"
-        onClick={(e) => { e.stopPropagation(); onStartTimer(region.id); }}>☀️</button>
-      <div className="crops">
-        {Array.from({ length: count }).map((_, i) => (
-          <PixelSprite key={i} kind={kind} color={t?.color || "#8fe39a"} size={size} />
-        ))}
-      </div>
-      <span className="bed-label">{region.label} <em>{st.icon}</em> <StagePips stage={region.stage} /></span>
-    </button>
   );
 }
 
@@ -226,39 +202,35 @@ export default function GardenScene({ regions, hover, selected, timerId, onHover
   onAddMilestone, onUpdateMilestone, onToggleMilestone, onDeleteMilestone, onEditBed, onDeleteBed }) {
   const sel = regions.find((r) => r.id === selected);
   const thirstyCount = regions.filter((r) => needsWater(r.lastTs)).length;
-  const hoveredRegion = hover ? regions.find((r) => r.id === hover) : null;
+  const totalSun = regions.reduce((n, r) => n + (r.sunshine || 0), 0);
+  const totalTended = regions.reduce((n, r) => n + r.tended, 0);
+  const totalPlants = regions.reduce((n, r) => n + (r.plants || []).length, 0);
+  const totalFruits = regions.reduce((n, r) => {
+    const ms = (r.milestones || []).filter((m) => !m.done).length;
+    const pf = (r.plants || []).reduce((s, p) => s + (p.fruits || []).filter((f) => !f.done).length, 0);
+    return n + ms + pf;
+  }, 0);
 
   return (
-    <section className="field" onClick={() => onSelect(null)}>
-      {GRASS.map((g, i) => (
-        <span key={i} className="grass-deco" style={{ left: `${g.x}%`, top: `${g.y}%` }}>
-          <PixelSprite kind={g.k} color="#8fe39a" size={g.k === "daisy" ? 16 : 20} />
-        </span>
-      ))}
+    <section className="garden-dash">
+      <div className="g-summary">
+        <div className="g-sum-item"><span className="g-sum-num">{regions.length}</span><span className="g-sum-label">beds</span></div>
+        <div className="g-sum-item"><span className="g-sum-num">{totalPlants}</span><span className="g-sum-label">plants</span></div>
+        <div className="g-sum-item"><span className="g-sum-num">{totalFruits}</span><span className="g-sum-label">fruits pending</span></div>
+        <div className="g-sum-item"><span className="g-sum-num">{totalSun}m</span><span className="g-sum-label">sunshine</span></div>
+        <div className="g-sum-item"><span className="g-sum-num">{totalTended}</span><span className="g-sum-label">tended</span></div>
+        {thirstyCount > 0 && (
+          <div className="g-sum-item g-sum-thirst"><span className="g-sum-num">💧 {thirstyCount}</span><span className="g-sum-label">need water</span></div>
+        )}
+      </div>
 
-      {thirstyCount > 0 && (
-        <div className="thirst-summary">💧 {thirstyCount} {thirstyCount === 1 ? "bed needs" : "beds need"} water</div>
-      )}
-
-      <div className="garden-canvas" onClick={(e) => e.stopPropagation()}>
+      <div className="g-grid">
         {regions.map((r) => (
-          <Bed key={r.id} region={r} selected={selected}
-            active={hover === r.id || selected === r.id}
-            thirsty={needsWater(r.lastTs)}
-            onHover={onHover} onSelect={onSelect} onStartTimer={onStartTimer} />
+          <BedCard key={r.id} region={r} onSelect={onSelect} onStartTimer={onStartTimer} />
         ))}
-        {hoveredRegion && !selected && <BedTooltip region={hoveredRegion} />}
       </div>
 
-      <div className="garden-foot" onClick={(e) => e.stopPropagation()}>
-        <div className="legend">
-          {STAGE_ORDER.map((s, i) => (
-            <span key={s} className="legend-item">{STAGES[s].icon} {STAGES[s].label}{i < STAGE_ORDER.length - 1 && <b>→</b>}</span>
-          ))}
-        </div>
-      </div>
-
-      {sel && <Detail region={sel} onClose={() => onSelect(null)} onWater={onWater} onNote={onNote}
+      {sel && <BedDetail region={sel} onClose={() => onSelect(null)} onWater={onWater} onNote={onNote}
         onSetCrop={onSetCrop} onStartTimer={onStartTimer} timerRunning={timerId === sel.id}
         onAddMilestone={onAddMilestone} onUpdateMilestone={onUpdateMilestone}
         onToggleMilestone={onToggleMilestone} onDeleteMilestone={onDeleteMilestone}
