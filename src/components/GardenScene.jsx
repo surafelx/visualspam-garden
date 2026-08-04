@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { threadById, STAGES, STAGE_ORDER, GROWTH_PER_STAGE, timeAgo, needsWater, CROP_CHOICES, milestoneStatus } from "../data.js";
 import { PixelSprite } from "../pixels.jsx";
 import MilestoneForm from "./MilestoneForm.jsx";
@@ -211,8 +211,34 @@ export default function GardenScene({ regions, hover, selected, timerId, onHover
     return n + ms + pf;
   }, 0);
 
+  const [clock, setClock] = useState(new Date());
+  useEffect(() => { const id = setInterval(() => setClock(new Date()), 15000); return () => clearInterval(id); }, []);
+  const H = clock.getHours();
+  const M = String(clock.getMinutes()).padStart(2, "0");
+  const WEEKDAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const MONTH = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  const FLOWERS = [
+    { x: 3, y: 8 }, { x: 15, y: 92 }, { x: 91, y: 6 }, { x: 96, y: 88 },
+    { x: 8, y: 50 }, { x: 94, y: 45 }, { x: 50, y: 96 }, { x: 30, y: 94 },
+    { x: 70, y: 95 }, { x: 2, y: 70 }, { x: 97, y: 65 },
+  ];
+
   return (
     <section className="garden-dash">
+      <div className="g-clock-row">
+        <div className="g-clock">
+          <span className="g-clock-time">{String(H).padStart(2, "0")}:{M}</span>
+          <span className="g-clock-date">{WEEKDAY[clock.getDay()]}, {MONTH[clock.getMonth()]} {clock.getDate()}</span>
+        </div>
+      </div>
+
+      <div className="g-flowers">
+        {FLOWERS.map((f, i) => (
+          <span key={i} className="g-flower" style={{ left: `${f.x}%`, top: `${f.y}%` }}>✿</span>
+        ))}
+      </div>
+
       <div className="g-summary">
         <div className="g-sum-item"><span className="g-sum-num">{regions.length}</span><span className="g-sum-label">beds</span></div>
         <div className="g-sum-item"><span className="g-sum-num">{totalPlants}</span><span className="g-sum-label">plants</span></div>
