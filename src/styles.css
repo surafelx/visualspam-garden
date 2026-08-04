@@ -33,7 +33,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
   background:
     repeating-linear-gradient(0deg, rgba(0,0,0,0.03) 0 14px, transparent 14px 28px),
     repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0 14px, transparent 14px 28px),
-    radial-gradient(140% 120% at 50% 0%, var(--grass) 0%, var(--grass-2) 70%);
+    radial-gradient(140% 120% at 50% 0%, #d4d9c8 0%, #c8cfb8 70%);
 }
 .grass-deco { position: absolute; transform: translate(-50%, -50%); opacity: 0.85; pointer-events: none; }
 
