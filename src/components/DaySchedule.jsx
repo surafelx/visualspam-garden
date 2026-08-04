@@ -88,6 +88,16 @@ export default function DaySchedule({ regions = [] }) {
 
   const planned = Object.values(slots).reduce((n, tasks) => n + (Array.isArray(tasks) ? tasks.filter((t) => t && (t.bedId || (t.text && t.text.trim()))).length : 0), 0);
 
+  // coverage: hours spanned by longer tasks → the hour they continue from
+  const coverage = {};
+  Object.entries(slots).forEach(([hs, tasks]) => {
+    if (!Array.isArray(tasks)) return;
+    const h0 = Number(hs);
+    tasks.forEach((t) => {
+      for (let k = 1; k < (t?.hours || 1); k++) if (h0 + k < 24) coverage[h0 + k] = h0;
+    });
+  });
+
   const syncToCalendar = () => {
     const ics = buildICS(slots, byId, new Date());
     const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
@@ -136,6 +146,23 @@ export default function DaySchedule({ regions = [] }) {
           const isNow = h === nowH;
           const dueFruit = todayFruits.find((f) => f.hour === h);
 
+          // this hour is spanned by a longer task above it → show continuation
+          if (coverage[h] != null && !filled && active !== h) {
+            const ps = slots[coverage[h]] || [];
+            const firstTask = Array.isArray(ps) ? ps[0] : ps;
+            const pb = firstTask?.bedId ? byId[firstTask.bedId] : null;
+            const pt = pb ? threadById[pb.thread] : null;
+            return (
+              <li key={h} className={`slot cont ${isNow ? "now" : ""}`}>
+                <span className="slot-time">{fmtHour(h)}</span>
+                <span className="slot-cont" onClick={() => setActive(coverage[h])}>
+                  {pt && <span className="slot-dot" style={{ background: pt.color }} />}
+                  <i>↑ {pb ? pb.label : "continues"}</i>
+                </span>
+              </li>
+            );
+          }
+
           return (
             <li key={h} className={`slot ${isNow ? "now" : ""} ${filled ? "filled" : ""} ${editing ? "editing" : ""}`}>
               <span className="slot-time">{fmtHour(h)}</span>
@@ -148,12 +175,14 @@ export default function DaySchedule({ regions = [] }) {
                         const bed = t.bedId ? byId[t.bedId] : null;
                         const plant = bed && t.plantId ? (bed.plants || []).find((p) => p.id === t.plantId) : null;
                         const thread = bed ? threadById[bed.thread] : null;
+                        const hours = t.hours || 1;
                         return (
                           <span key={i} className="slot-task-chip">
                             {thread && <span className="slot-dot" style={{ background: thread.color }} />}
                             {bed && <b>{bed.label}</b>}
                             {plant && <span className="slot-plant-tag">→ {plant.name}</span>}
                             {t.text && <span className="slot-what">{t.text}</span>}
+                            {hours > 1 && <span className="slot-dur">{fmtHour(h)}–{h + hours >= 24 ? "24:00" : fmtHour(h + hours)}</span>}
                           </span>
                         );
                       })}
@@ -203,6 +232,14 @@ export default function DaySchedule({ regions = [] }) {
                             onChange={(e) => updateTask(h, idx, { text: e.target.value })}
                             onKeyDown={(e) => e.key === "Enter" && setActive(null)}
                             placeholder="what will you do…" />
+
+                          <div className="pick-row dur-row">
+                            <span className="pick-label">duration</span>
+                            <button className="dur-btn" onClick={() => updateTask(h, idx, { hours: Math.max(1, (task.hours || 1) - 1) })} disabled={(task.hours || 1) <= 1}>−</button>
+                            <span className="dur-val">{task.hours || 1}h</span>
+                            <button className="dur-btn" onClick={() => updateTask(h, idx, { hours: Math.min(24 - h, (task.hours || 1) + 1) })} disabled={h + (task.hours || 1) >= 24}>+</button>
+                            <span className="dur-until">{(task.hours || 1) > 1 ? `until ${h + (task.hours || 1) >= 24 ? "24:00" : fmtHour(h + (task.hours || 1))}` : ""}</span>
+                          </div>
                         </div>
                         <button className="task-remove" onClick={() => { removeTask(h, idx); if (getTasks(h).length <= 1) setActive(null); }}>✕</button>
                       </div>
