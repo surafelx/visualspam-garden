@@ -569,3 +569,34 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 .slot.now { position: relative; }
 .slot.now .slot-time { color: #e0894a; font-weight: 700; }
 .slot.now::before { content: ""; position: absolute; left: -14px; top: 50%; transform: translateY(-50%); width: 6px; height: 6px; border-radius: 50%; background: #e0894a; box-shadow: 0 0 8px #e0894a; }
+
+/* ── day plan: rich slot editor (bed + milestones + what) ── */
+.slot { align-items: center; }
+.slot.editing { align-items: flex-start; }
+.slot.editing .slot-time { margin-top: 12px; }
+.slot-summary {
+  flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 8px;
+  padding: 9px 10px; border-radius: 8px; text-align: left; font-family: inherit; font-size: 0.9rem; color: #33302a;
+  transition: background 0.12s;
+}
+.slot-summary:hover { background: #eef1e6; }
+.slot-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+.slot-summary b { flex: 0 0 auto; color: #26231c; }
+.slot-what { color: #6a6355; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot-empty { color: #bcb4a1; }
+
+.slot-editor { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 9px; padding: 11px; margin: 5px 0; background: #eef1e6; border-radius: 12px; }
+.pick-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.pick-label, .pick-empty { font-size: 0.68rem; color: #9aa088; text-transform: uppercase; letter-spacing: 0.06em; }
+.bed-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; font-family: inherit; font-size: 0.78rem; color: #4a463c; background: #fff; border: 1px solid #e0dccb; transition: border-color 0.12s, background 0.12s; }
+.bed-chip:hover { border-color: var(--rc); }
+.bed-chip.on { background: color-mix(in srgb, var(--rc) 16%, #fff); border-color: var(--rc); color: #2c2920; }
+.bed-chip-dot { width: 8px; height: 8px; border-radius: 50%; }
+.ms-chip { padding: 5px 10px; border-radius: 8px; font-family: inherit; font-size: 0.76rem; color: #4a463c; background: #fff; border: 1px solid #e0dccb; }
+.ms-chip:hover { border-color: #8fd39a; }
+.ms-chip.on { background: #e6f2e4; border-color: #8fd39a; color: #2f6b3e; }
+.slot-editor .slot-input { background: #fff; border: 1px solid #ddd6c4; border-radius: 8px; }
+.editor-actions { display: flex; gap: 8px; }
+.ed-done { padding: 6px 15px; border-radius: 8px; background: var(--sprout); color: #0c2413; font-family: inherit; font-size: 0.78rem; }
+.ed-clear { padding: 6px 12px; border-radius: 8px; color: #a89f8c; font-family: inherit; font-size: 0.78rem; }
+.ed-clear:hover { color: #c0392b; }

@@ -183,7 +183,7 @@ export default function App() {
             onDeleteMilestone={deleteMilestone}
           />
         ) : view === "day" ? (
-          <DaySchedule />
+          <DaySchedule regions={regions} />
         ) : view === "calendar" ? (
           <CalendarView regions={regions} view={view} />
         ) : (
