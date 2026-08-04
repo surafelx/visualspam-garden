@@ -34,7 +34,7 @@ function BedCard({ region, onSelect, onStartTimer }) {
   const pendingMs = milestones.filter((m) => !m.done).length;
   const lastLog = (region.logs || [])[0];
   const spriteSize = region.id === "rest" ? 56 : region.stage === "flourishing" ? 44 : region.stage === "seed" ? 32 : 38;
-  const count = region.id === "rest" ? 1 : 3;
+  const count = region.id === "rest" ? 1 : plants.length > 0 ? Math.min(plants.length, 5) : 3;
 
   return (
     <button className="g-card" style={{ "--rc": t?.color }} onClick={() => onSelect(region.id)}>
@@ -212,9 +212,10 @@ export default function GardenScene({ regions, hover, selected, timerId, onHover
   }, 0);
 
   const [clock, setClock] = useState(new Date());
-  useEffect(() => { const id = setInterval(() => setClock(new Date()), 15000); return () => clearInterval(id); }, []);
+  useEffect(() => { const id = setInterval(() => setClock(new Date()), 1000); return () => clearInterval(id); }, []);
   const H = clock.getHours();
   const M = String(clock.getMinutes()).padStart(2, "0");
+  const S = String(clock.getSeconds()).padStart(2, "0");
   const WEEKDAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const MONTH = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -228,7 +229,7 @@ export default function GardenScene({ regions, hover, selected, timerId, onHover
     <section className="garden-dash">
       <div className="g-clock-row">
         <div className="g-clock">
-          <span className="g-clock-time">{String(H).padStart(2, "0")}:{M}</span>
+          <span className="g-clock-time">{String(H).padStart(2, "0")}:{M}:{S}</span>
           <span className="g-clock-date">{WEEKDAY[clock.getDay()]}, {MONTH[clock.getMonth()]} {clock.getDate()}</span>
         </div>
       </div>
