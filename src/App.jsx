@@ -294,6 +294,7 @@ export default function App() {
           <BedDetailPage
             region={regions.find((r) => r.id === selected)}
             onBack={() => setView("garden")}
+            onRefresh={refetchRegions}
             onWater={(id, text) => tend(id, "water", text)}
             onNote={(id, text) => tend(id, "note", text)}
             onSetCrop={setCrop}

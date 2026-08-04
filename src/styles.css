@@ -553,7 +553,6 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 .detail-modal, .milestone-form, .bed-form, .settings-modal {
   background: #f7f5ee !important;
   border: 1px solid #e3ddcd !important;
-  border-top: 4px solid var(--rc, #8fe39a) !important;
   box-shadow: 0 30px 70px -20px rgba(30, 34, 24, 0.45) !important;
   color: #2c2920 !important;
 }
@@ -1074,7 +1073,6 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
   box-shadow: 0 4px 12px -4px rgba(0,0,0,0.08);
 }
 .lp-book:hover { transform: translateY(-3px); box-shadow: 0 8px 24px -6px rgba(0,0,0,0.14); }
-.lp-book-accent { width: 5px; flex: 0 0 auto; border-radius: 14px 0 0 14px; }
 .lp-book-inner { padding: 20px 24px; flex: 1; }
 .lp-book-kind {
   font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase;
@@ -1093,7 +1091,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
   transition: background 0.12s; margin-bottom: 24px; display: inline-block;
 }
 .lp-back:hover { background: #d4d9c8; }
-.lp-reader { border-top: 3px solid var(--rc, #8fe39a); padding-top: 24px; }
+.lp-reader { padding-top: 24px; }
 .lp-reader-kicker { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: #8a8271; margin-bottom: 12px; }
 .lp-reader-title { font-family: var(--serif); font-weight: 600; font-size: 2rem; line-height: 1.15; color: #26231c; margin-bottom: 6px; }
 .lp-reader-date { font-size: 0.75rem; color: #b0a898; margin-bottom: 24px; }
@@ -1121,7 +1119,6 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
   cursor: pointer; transition: background 0.14s, transform 0.14s;
 }
 .book:hover { background: rgba(255,255,255,0.8); transform: translateX(4px); }
-.book-accent { width: 4px; flex: 0 0 auto; border-radius: 10px 0 0 10px; }
 .book-body { padding: 16px 20px; flex: 1; }
 .book-kind { font-family: var(--font); font-size: 0.6rem; letter-spacing: 0.16em; text-transform: uppercase; color: #a39a86; }
 .book-title { font-family: var(--serif); font-size: 1.25rem; margin: 5px 0; color: #26231c; }

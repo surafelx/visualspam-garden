@@ -5,7 +5,6 @@ function BookCard({ article, onOpen }) {
   const t = threadById[article.thread];
   return (
     <button className="lp-book" style={{ "--rc": t?.color }} onClick={() => onOpen(article)}>
-      <div className="lp-book-accent" style={{ background: t?.color }} />
       <div className="lp-book-inner">
         <span className="lp-book-kind">{article.kind}</span>
         <h3 className="lp-book-title">{article.title}</h3>
