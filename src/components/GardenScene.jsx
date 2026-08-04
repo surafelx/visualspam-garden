@@ -21,24 +21,31 @@ function BedCard({ region, onSelect, onStartTimer, onWater }) {
             <PixelSprite key={i} kind={plants[i]?.crop || "leafy"} color={t?.color || "#8fe39a"} size={spriteSize} />
           ))}
         </div>
-        <div className="g-card-btns">
-          <button className="g-card-water" title="Water" onClick={(e) => { e.stopPropagation(); onWater(region.id); }}>💧</button>
-          <button className="g-card-sun" title="Give sunshine" onClick={(e) => { e.stopPropagation(); onStartTimer(region.id); }}>☀️</button>
-        </div>
       </div>
       <div className="g-card-mid">
         <div className="g-card-name">{region.label}</div>
       </div>
       <div className="g-card-stats">
-        <span>☀️ {region.sunshine || 0}m</span>
-        <span>🌿 {region.tended}×</span>
-        {plants.length > 0 && <span>🌱 {plants.length}</span>}
-        {pendingFruits > 0 && <span className="g-card-fruits">🍊 {pendingFruits}</span>}
-        {doneFruits > 0 && <span className="g-card-harvested">✓ {doneFruits}</span>}
+        <span className="g-stat"><span className="g-stat-icon">☀️</span><span className="g-stat-val">{region.sunshine || 0}</span><span className="g-stat-unit">m</span></span>
+        <span className="g-stat"><span className="g-stat-icon">🌿</span><span className="g-stat-val">{region.tended}</span><span className="g-stat-unit">×</span></span>
+        {plants.length > 0 && <span className="g-stat"><span className="g-stat-icon">🌱</span><span className="g-stat-val">{plants.length}</span></span>}
+        {pendingFruits > 0 && <span className="g-stat g-stat-fruit"><span className="g-stat-icon">🍊</span><span className="g-stat-val">{pendingFruits}</span></span>}
+        {doneFruits > 0 && <span className="g-stat g-stat-done"><span className="g-stat-icon">✓</span><span className="g-stat-val">{doneFruits}</span></span>}
       </div>
       {lastLog && (
-        <div className="g-card-log">{lastLog.type === "water" ? "💧" : lastLog.type === "sun" ? "☀️" : lastLog.type === "note" ? "✎" : "•"} {lastLog.text?.slice(0, 50)}</div>
+        <div className="g-card-log">
+          <span className="g-card-log-icon">{lastLog.type === "water" ? "💧" : lastLog.type === "sun" ? "☀️" : lastLog.type === "note" ? "✎" : "•"}</span>
+          <span className="g-card-log-text">{lastLog.text?.slice(0, 40)}</span>
+        </div>
       )}
+      <div className="g-card-actions">
+        <button className="g-card-action g-card-water" title="Water" onClick={(e) => { e.stopPropagation(); onWater(region.id); }}>
+          <span className="gca-icon">💧</span><span className="gca-label">Water</span>
+        </button>
+        <button className="g-card-action g-card-sun" title="Give sunshine" onClick={(e) => { e.stopPropagation(); onStartTimer(region.id); }}>
+          <span className="gca-icon">☀️</span><span className="gca-label">Sun</span>
+        </button>
+      </div>
     </button>
   );
 }

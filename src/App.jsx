@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { STAGES, threadById, timeAgo, dayKey } from "./data.js";
 
 const FEED_ICON = { water: "💧", note: "✎", grow: "🌸", sun: "☀️", checkin: "🌱" };
@@ -153,6 +153,25 @@ export default function App() {
 
   const viewBedDetail = (id) => { setView("bed"); setSelected(id); };
 
+  const nextPlan = useMemo(() => {
+    const now = new Date();
+    const currentH = now.getHours();
+    const today = dayKey(now);
+    try {
+      const sched = JSON.parse(localStorage.getItem(`vsg_schedule_${today}`)) || {};
+      for (let h = currentH; h < 24; h++) {
+        const tasks = sched[h];
+        if (Array.isArray(tasks)) {
+          const filled = tasks.filter((t) => t && (t.bedId || (t.text && t.text.trim())));
+          if (filled.length > 0) return { hour: h, tasks: filled };
+        } else if (tasks && (tasks.bedId || tasks.text)) {
+          return { hour: h, tasks: [tasks] };
+        }
+      }
+    } catch (e) { /* ignore */ }
+    return null;
+  }, [clock]);
+
   if (loading) {
     return <div className="app-min" style={{ display: "grid", placeItems: "center", color: "#6b6455" }}>loading…</div>;
   }
@@ -222,6 +241,27 @@ export default function App() {
       </main>
 
       <aside className="dash-right">
+        {nextPlan && (
+          <div className="rail-next-plan">
+            <div className="rail-head rail-head-sub">🕐 Next up · {String(nextPlan.hour).padStart(2, "0")}:00</div>
+            <ul className="rail-next-list">
+              {nextPlan.tasks.map((t, i) => {
+                const bed = t.bedId ? regions.find((r) => r.id === t.bedId) : null;
+                const thread = bed ? threadById[bed.thread] : null;
+                return (
+                  <li key={i} className="rail-next-item" onClick={() => bed && viewBedDetail(bed.id)}>
+                    {thread && <span className="rail-next-dot" style={{ background: thread.color }} />}
+                    <span className="rail-next-info">
+                      {bed && <b>{bed.label}</b>}
+                      {t.text && <span className="rail-next-text">{t.text}</span>}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
         <div className="rail-head">
           <span>Your beds</span>
           <button className="rail-add-btn" onClick={() => setBedForm("new")} title="Add new bed">+</button>
@@ -230,12 +270,18 @@ export default function App() {
         <ul className="bed-rail">
           {regions.map((r) => {
             const t = threadById[r.thread];
+            const lastLog = (r.logs || [])[0];
             return (
               <li key={r.id} className="bed-rail-item" onClick={() => viewBedDetail(r.id)}>
                 <span className="bed-rail-dot" style={{ background: t?.color }} />
                 <span className="bed-rail-main">
                   <b>{r.label}</b>
                   <span className="bed-rail-stage">{t?.icon} {t?.label}</span>
+                  {lastLog && (
+                    <span className="bed-rail-log">
+                      {lastLog.type === "water" ? "💧" : lastLog.type === "sun" ? "☀️" : lastLog.type === "note" ? "✎" : "•"} {lastLog.text?.slice(0, 35)}
+                    </span>
+                  )}
                 </span>
               </li>
             );
