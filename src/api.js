@@ -15,7 +15,9 @@ async function request(path, opts = {}) {
 
 // ── Regions ──
 export const fetchRegions = () => request("/regions");
+export const createRegion = (data) => request("/regions", { method: "POST", body: data });
 export const updateRegion = (id, data) => request(`/regions/${id}`, { method: "PUT", body: data });
+export const deleteRegion = (id) => request(`/regions/${id}`, { method: "DELETE" });
 
 // ── Milestones ──
 export const addMilestone = (regionId, milestone) => request(`/regions/${regionId}/milestones`, { method: "POST", body: milestone });

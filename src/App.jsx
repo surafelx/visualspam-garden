@@ -12,6 +12,7 @@ import CalendarView from "./components/CalendarView.jsx";
 import DaySchedule from "./components/DaySchedule.jsx";
 import DurationPicker from "./components/DurationPicker.jsx";
 import CountdownTimer from "./components/CountdownTimer.jsx";
+import BedForm from "./components/BedForm.jsx";
 
 export default function App() {
   const [regions, setRegions] = useState([]);
@@ -138,6 +139,35 @@ export default function App() {
     } catch (e) { console.error(e); }
   };
 
+  // bed form: null | "new" | region object
+  const [bedForm, setBedForm] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+
+  const createBed = async (bed) => {
+    try {
+      const saved = await api.createRegion(bed);
+      setRegions((rs) => [...rs, saved]);
+      setBedForm(null);
+    } catch (e) { console.error(e); }
+  };
+
+  const updateBed = async (bed) => {
+    try {
+      const saved = await api.updateRegion(bed.id, bed);
+      applyGrow(saved);
+      setBedForm(null);
+    } catch (e) { console.error(e); }
+  };
+
+  const deleteBed = async (id) => {
+    try {
+      await api.deleteRegion(id);
+      setRegions((rs) => rs.filter((r) => r.id !== id));
+      setSelected(null);
+      setConfirmDelete(null);
+    } catch (e) { console.error(e); }
+  };
+
   if (loading) {
     return <div className="app-min" style={{ display: "grid", placeItems: "center", color: "#6b6455" }}>loading…</div>;
   }
@@ -225,6 +255,8 @@ export default function App() {
             onUpdateMilestone={updateMilestone}
             onToggleMilestone={toggleMilestone}
             onDeleteMilestone={deleteMilestone}
+            onEditBed={(bed) => setBedForm(bed)}
+            onDeleteBed={(id) => setConfirmDelete(id)}
           />
         ) : view === "day" ? (
           <DaySchedule regions={regions} />
@@ -239,6 +271,7 @@ export default function App() {
       <aside className="dash-right">
         <div className="rail-head">
           <span>Your beds</span>
+          <button className="rail-add-btn" onClick={() => setBedForm("new")} title="Add new bed">+</button>
           {thirsty > 0 && <span className="rail-thirsty">💧 {thirsty}</span>}
         </div>
         <ul className="bed-rail">
@@ -280,6 +313,25 @@ export default function App() {
       )}
       {timerPhase === "countdown" && timerRegion && (
         <CountdownTimer regionLabel={timerRegion.label} durationMins={timerMins} onComplete={completeCountdown} onCancel={cancelTimer} />
+      )}
+      {bedForm === "new" && (
+        <BedForm onSave={createBed} onCancel={() => setBedForm(null)} />
+      )}
+      {bedForm && bedForm !== "new" && (
+        <BedForm bed={bedForm} onSave={updateBed} onCancel={() => setBedForm(null)} />
+      )}
+      {confirmDelete && (
+        <div className="modal-backdrop" onClick={() => setConfirmDelete(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setConfirmDelete(null)}>✕</button>
+            <h2 className="ms-title">Delete bed?</h2>
+            <p className="ms-region">This will remove {regions.find((r) => r.id === confirmDelete)?.label || "this bed"} and all its milestones.</p>
+            <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+              <button className="ms-save" style={{ flex: 1 }} onClick={() => deleteBed(confirmDelete)}>Delete</button>
+              <button className="ed-clear" style={{ flex: 1 }} onClick={() => setConfirmDelete(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

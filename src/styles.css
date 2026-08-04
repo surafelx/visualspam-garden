@@ -710,3 +710,33 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 /* the floating now-widget must size to its content (the .dash-main > * height
    rule is only meant for the full view, not the overlay) */
 .now-float { height: auto !important; }
+
+/* ── bed form: thread grid ── */
+.bed-form { max-width: 420px; }
+.thread-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.thread-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 10px; border-radius: 8px; font-family: inherit; font-size: 0.78rem;
+  color: #4a463c; background: #fff; border: 1px solid #e0dccb;
+  transition: border-color 0.12s, background 0.12s;
+}
+.thread-chip:hover { border-color: var(--tc); }
+.thread-chip.on { background: color-mix(in srgb, var(--tc) 14%, #fff); border-color: var(--tc); color: #2c2920; }
+.thread-chip-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+
+/* ── rail add button ── */
+.rail-add-btn {
+  width: 26px; height: 26px; border-radius: 8px; font-size: 1rem; line-height: 1;
+  color: #4c9a63; background: #e6f2e4;
+  display: grid; place-items: center; transition: background 0.12s, transform 0.1s;
+}
+.rail-add-btn:hover { background: #dcecd9; transform: scale(1.08); }
+
+/* ── detail modal: bed edit/delete buttons ── */
+.detail-bed-actions { display: flex; gap: 4px; margin-left: auto; }
+.detail-edit-btn, .detail-del-btn {
+  width: 28px; height: 28px; border-radius: 7px; font-size: 0.78rem;
+  color: #a89f8c; background: none; transition: background 0.12s, color 0.12s;
+}
+.detail-edit-btn:hover { color: #2c2920; background: #ebe6d7; }
+.detail-del-btn:hover { color: #c0392b; background: #f5e0e0; }

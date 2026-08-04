@@ -31,7 +31,7 @@ function StagePips({ stage }) {
 const LOG_ICON = { water: "💧", note: "✎", grow: "🌸", sun: "☀️" };
 
 function Detail({ region, onClose, onWater, onNote, onSetCrop, onStartTimer, timerRunning,
-  onAddMilestone, onUpdateMilestone, onToggleMilestone, onDeleteMilestone }) {
+  onAddMilestone, onUpdateMilestone, onToggleMilestone, onDeleteMilestone, onEditBed, onDeleteBed }) {
   const [text, setText] = useState("");
   const [msForm, setMsForm] = useState(null); // null | "new" | milestone object
   const t = threadById[region.thread];
@@ -58,6 +58,10 @@ function Detail({ region, onClose, onWater, onNote, onSetCrop, onStartTimer, tim
           <div>
             <div className="detail-name">{region.label} <span>· {region.sub}</span></div>
             <div className="detail-stage">{st.icon} {st.label} — {st.verb} <StagePips stage={region.stage} /></div>
+          </div>
+          <div className="detail-bed-actions">
+            <button className="detail-edit-btn" onClick={() => onEditBed(region)} title="Edit bed">✎</button>
+            <button className="detail-del-btn" onClick={() => onDeleteBed(region.id)} title="Delete bed">✕</button>
           </div>
         </div>
         {region.stage !== "flourishing" && (
@@ -223,7 +227,7 @@ function Bed({ region, active, thirsty, onHover, onSelect, selected, onStartTime
 }
 
 export default function GardenScene({ regions, hover, selected, timerId, onHover, onSelect, onWater, onNote, onSetCrop, onStartTimer,
-  onAddMilestone, onUpdateMilestone, onToggleMilestone, onDeleteMilestone }) {
+  onAddMilestone, onUpdateMilestone, onToggleMilestone, onDeleteMilestone, onEditBed, onDeleteBed }) {
   const sel = regions.find((r) => r.id === selected);
   const byId = Object.fromEntries(regions.map((r) => [r.id, r]));
   const thirstyCount = regions.filter((r) => needsWater(r.lastTs)).length;
@@ -268,7 +272,8 @@ export default function GardenScene({ regions, hover, selected, timerId, onHover
       {sel && <Detail region={sel} onClose={() => onSelect(null)} onWater={onWater} onNote={onNote}
         onSetCrop={onSetCrop} onStartTimer={onStartTimer} timerRunning={timerId === sel.id}
         onAddMilestone={onAddMilestone} onUpdateMilestone={onUpdateMilestone}
-        onToggleMilestone={onToggleMilestone} onDeleteMilestone={onDeleteMilestone} />}
+        onToggleMilestone={onToggleMilestone} onDeleteMilestone={onDeleteMilestone}
+        onEditBed={onEditBed} onDeleteBed={onDeleteBed} />}
     </section>
   );
 }

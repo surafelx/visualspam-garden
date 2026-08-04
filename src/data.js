@@ -4,7 +4,7 @@
 
 // Life Threads — the colour + emoji language used everywhere. A thread maps to
 // a region of the garden.
-const threads = [
+export const threads = [
   { id: "technology", name: "Technology", color: "#6ec1ff", icon: "💻" },
   { id: "philosophy", name: "Philosophy", color: "#c7a6ff", icon: "📜" },
   { id: "architecture", name: "Architecture", color: "#ffcf8b", icon: "📐" },
