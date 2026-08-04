@@ -66,6 +66,44 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 @keyframes sway { 0%,100% { transform: rotate(-1.4deg); } 50% { transform: rotate(1.4deg); } }
 .bed.stage-flourishing .crops { filter: drop-shadow(0 0 4px color-mix(in srgb, var(--rc) 40%, transparent)); }
 
+/* ── per-bed sunshine quick-start button ── */
+.bed-sun-btn {
+  position: absolute; top: -2px; right: -2px; z-index: 5;
+  width: 26px; height: 26px; border-radius: 50%;
+  font-size: 0.78rem; line-height: 1;
+  color: #3a2600; background: linear-gradient(180deg, #ffd873, #f0b53c);
+  box-shadow: 0 2px 6px -2px rgba(0,0,0,0.4);
+  opacity: 0; transform: scale(0.8);
+  transition: opacity 0.15s, transform 0.15s;
+  pointer-events: none;
+}
+.bed:hover .bed-sun-btn { opacity: 1; transform: scale(1); pointer-events: auto; }
+.bed-sun-btn:hover { filter: brightness(1.1); transform: scale(1.12) !important; }
+.bed-sun-btn:active { transform: scale(0.95) !important; }
+
+/* ── mini stats tooltip on hover ── */
+.bed-tooltip {
+  position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%);
+  z-index: 20; min-width: 160px; padding: 10px 12px;
+  background: rgba(20, 26, 16, 0.94); backdrop-filter: blur(6px);
+  border: 1px solid color-mix(in srgb, var(--rc, #8fe39a) 50%, transparent);
+  border-radius: 10px; pointer-events: none;
+  animation: ttIn 0.15s ease;
+}
+@keyframes ttIn { from { opacity: 0; transform: translateX(-50%) translateY(4px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+.tt-row { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; color: rgba(255,255,255,0.7); line-height: 1.3; }
+.tt-row + .tt-row { margin-top: 4px; }
+.tt-head { gap: 5px; }
+.tt-icon { font-size: 0.85rem; }
+.tt-stage { color: var(--rc, #8fe39a); font-weight: 600; }
+.tt-pct { margin-left: auto; color: rgba(255,255,255,0.4); font-variant-numeric: tabular-nums; }
+.tt-bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.1); margin: 5px 0 2px; overflow: hidden; }
+.tt-bar i { display: block; height: 100%; border-radius: 2px; background: var(--rc, #8fe39a); transition: width 0.3s; }
+.tt-note { color: rgba(255,255,255,0.35); font-size: 0.66rem; }
+
+/* ── log icon ── */
+.log-ico { flex: 0 0 auto; font-size: 0.82rem; }
+
 .bed-label {
   display: flex; align-items: center; gap: 5px; font-size: 0.66rem; line-height: 1;
   color: rgba(255, 255, 255, 0.82); text-shadow: 0 1px 2px rgba(0,0,0,0.7);
@@ -283,7 +321,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
   .field { padding: 12px; }
   .beds { grid-template-columns: repeat(3, 1fr); gap: 12px; }
   .plot { padding: 18px; }
-  .detail { left: 12px; right: 12px; width: auto; bottom: 12px; }
+  .detail-modal { left: 12px; right: 12px; width: auto; bottom: 12px; }
   .legend { display: none; }
 }
 @media (max-width: 460px) { .beds { grid-template-columns: repeat(2, 1fr); } }

@@ -15,21 +15,9 @@ async function request(path, opts = {}) {
 
 // ── Regions ──
 export const fetchRegions = () => request("/regions");
-export const fetchRegion = (id) => request(`/regions/${id}`);
-export const createRegion = (data) => request("/regions", { method: "POST", body: data });
 export const updateRegion = (id, data) => request(`/regions/${id}`, { method: "PUT", body: data });
-export const deleteRegion = (id) => request(`/regions/${id}`, { method: "DELETE" });
-
-// ── Logs ──
-export const addLog = (regionId, log) => request(`/regions/${regionId}/logs`, { method: "POST", body: log });
-export const deleteLog = (regionId, logIndex) => request(`/regions/${regionId}/logs/${logIndex}`, { method: "DELETE" });
 
 // ── Milestones ──
 export const addMilestone = (regionId, milestone) => request(`/regions/${regionId}/milestones`, { method: "POST", body: milestone });
 export const updateMilestone = (regionId, msId, data) => request(`/regions/${regionId}/milestones/${msId}`, { method: "PUT", body: data });
 export const deleteMilestone = (regionId, msId) => request(`/regions/${regionId}/milestones/${msId}`, { method: "DELETE" });
-
-// ── Checkins ──
-export const fetchCheckins = () => request("/checkins");
-export const createCheckin = (data) => request("/checkins", { method: "POST", body: data });
-export const deleteCheckin = (id) => request(`/checkins/${id}`, { method: "DELETE" });

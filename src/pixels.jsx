@@ -19,6 +19,16 @@ const FIXED = {
   D: "#3f2c1d", // dark soil
   K: "#4e8c3f", // grass tuft
   e: "#eef3ea", // white petal
+  Y: "#ffd700", // star gold
+  F: "#ffe066", // firefly glow
+  u: "#c8e6ff", // cloud white
+  U: "#a8d4f0", // cloud shadow
+  N: "#f5c842", // sun body
+  n: "#e8a020", // sun ray
+  H: "#5a8a3c", // hill light
+  h: "#3d6a28", // hill dark
+  l: "#c05020", // autumn leaf
+  S: "#e8eef5", // snow
 };
 
 function hexA(hex, a) {
@@ -102,6 +112,12 @@ export const SPRITES = {
   can: [".sss..", "sssss.", "sssssS", "sssss.", ".sss.."],
   tuft: ["K.K.K", "KKKKK"],
   daisy: [".e.", "eOe", ".e."],
+  // scene sprites
+  cloud: ["..uuuu..", "uuuuuuuu", "uuUuUuuu", ".uuuuuu."],
+  sun: [".nnn.", "nNNNn", "nNNNn", "nNNNn", ".nnn."],
+  hill: [".hHHHh.", "hHHHHHh", "HHHHHHH", "HHHHHHH"],
+  leaf: ["..l..", ".lLl.", "lLLLl", ".lLl.", "..l.."],
+  snow: [".S.S.", "SSSSS", "S.S.S", "SSSSS", ".S.S."],
 };
 
 export function PixelSprite({ kind, color = "#8fe39a", size = 40 }) {
