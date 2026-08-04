@@ -22,18 +22,13 @@ export default function BedForm({ bed, onSave, onCancel }) {
       thread,
       note: note.trim(),
       kind: bed?.kind || BED_KINDS[Math.floor(Math.random() * BED_KINDS.length)],
-      stage: bed?.stage || "seed",
-      growth: bed?.growth || 0,
       tended: bed?.tended || 0,
       sunshine: bed?.sunshine || 0,
       lastTs: bed?.lastTs || new Date().toISOString(),
-      crop: bed?.crop || null,
       logs: bed?.logs || [],
-      milestones: bed?.milestones || [],
+      plants: bed?.plants || [],
     });
   };
-
-  const selectedThread = threads.find((t) => t.id === thread);
 
   return (
     <div className="modal-backdrop" onClick={onCancel}>

@@ -1,11 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { STAGE_ORDER, GROWTH_PER_STAGE, STAGES, threadById, timeAgo, dayKey } from "./data.js";
+import { STAGES, threadById, timeAgo, dayKey } from "./data.js";
 
 const FEED_ICON = { water: "💧", note: "✎", grow: "🌸", sun: "☀️", checkin: "🌱" };
-const fmtHour = (h) => `${String(h).padStart(2, "0")}:00`;
-const WEEKDAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const WEEKDAY_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const MONTH = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 import * as api from "./api.js";
 import GardenScene from "./components/GardenScene.jsx";
 import Library from "./components/Library.jsx";
@@ -19,9 +15,8 @@ import LoginGate from "./components/LoginGate.jsx";
 import PublicPage from "./components/PublicPage.jsx";
 
 function getSettings() {
-  try {
-    return JSON.parse(localStorage.getItem("vsg_settings")) || {};
-  } catch { return {}; }
+  try { return JSON.parse(localStorage.getItem("vsg_settings")) || {}; }
+  catch { return {}; }
 }
 function saveSettings(s) { localStorage.setItem("vsg_settings", JSON.stringify(s)); }
 
@@ -30,8 +25,8 @@ async function aiAnalyze(regions, settings) {
   if (!apiKey || !regions.length) return null;
   const prompt = `You are a garden life-coach AI. Analyze these garden beds and give a short 2-3 sentence overall summary plus one top priority action. Be concise and warm.\n\nBeds:\n${regions.map((r) => {
     const days = Math.floor((Date.now() - new Date(r.lastTs).getTime()) / 864e5);
-    const ms = (r.milestones || []).filter((m) => !m.done);
-    return `- ${r.label} (${r.stage}, tended ${r.tended}x, ${r.sunshine || 0}m sun, ${days}d since water, ${ms.length} pending milestones)`;
+    const plants = (r.plants || []).length;
+    return `- ${r.label} (tended ${r.tended}x, ${r.sunshine || 0}m sun, ${days}d since water, ${plants} plants)`;
   }).join("\n")}`;
   try {
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -56,10 +51,7 @@ export default function App() {
   const handleLogin = () => setAdmin(true);
   const handleLogout = () => { localStorage.removeItem("vsg_admin"); setAdmin(false); };
   const handleAdminFromPublic = () => {
-    if (!admin) {
-      localStorage.setItem("vsg_admin", "1");
-      setAdmin(true);
-    }
+    if (!admin) { localStorage.setItem("vsg_admin", "1"); setAdmin(true); }
   };
 
   const refetchRegions = useCallback(async () => {
@@ -95,6 +87,10 @@ export default function App() {
   const [timerPlantId, setTimerPlantId] = useState(null);
   const [timerMins, setTimerMins] = useState(0);
 
+  // Water log modal
+  const [waterLog, setWaterLog] = useState(null);
+  const [waterText, setWaterText] = useState("");
+
   const applyGrow = (regionData) => {
     setRegions((rs) => rs.map((r) => r.id === regionData.id ? regionData : r));
   };
@@ -104,40 +100,27 @@ export default function App() {
     if (!region) return;
     const nowIso = new Date().toISOString();
     const logs = [{ ts: nowIso, ...log }, ...region.logs];
-    let stage = region.stage;
-    let growth = region.growth + 1;
-    const i = STAGE_ORDER.indexOf(stage);
-    if (growth >= GROWTH_PER_STAGE && i < STAGE_ORDER.length - 1) {
-      stage = STAGE_ORDER[i + 1];
-      growth = 0;
-      logs.unshift({ ts: nowIso, type: "grow", text: `grew to ${STAGES[stage].label}` });
-    }
     const extraData = typeof extra === "function" ? extra(region) : extra;
-    const updated = { ...region, logs, stage, growth, tended: region.tended + 1, lastTs: nowIso, ...extraData };
+    const updated = { ...region, logs, tended: region.tended + 1, lastTs: nowIso, ...extraData };
     try {
       const saved = await api.updateRegion(id, updated);
       applyGrow(saved);
     } catch (e) { console.error(e); }
   };
 
-  const tend = (id, type, text) =>
-    grow(id, { type, text: text || (type === "water" ? "watered" : "paid attention") }, () => ({}));
-
-  const setCrop = async (id, crop) => {
-    try {
-      const saved = await api.updateRegion(id, { crop });
-      applyGrow(saved);
-    } catch (e) { console.error(e); }
+  const openWaterLog = (id) => { setWaterLog(id); setWaterText(""); };
+  const submitWater = () => {
+    if (!waterLog) return;
+    const text = waterText.trim() || "watered";
+    grow(waterLog, { type: "water", text });
+    setWaterLog(null); setWaterText("");
   };
 
   const openPicker = (id) => {
     setTimerRegionId(id);
     const region = regions.find((r) => r.id === id);
-    if (region?.plants?.length > 0) {
-      setTimerPhase("picking-plant");
-    } else {
-      setTimerPhase("picking");
-    }
+    if (region?.plants?.length > 0) setTimerPhase("picking-plant");
+    else setTimerPhase("picking");
   };
   const pickPlant = (plantId) => { setTimerPlantId(plantId); setTimerPhase("picking"); };
   const startCountdown = (mins) => { setTimerMins(mins); setTimerPhase("countdown"); };
@@ -155,25 +138,6 @@ export default function App() {
 
   const timerRegion = timerRegionId && regions.find((r) => r.id === timerRegionId);
 
-  const addMilestone = async (regionId, milestone) => {
-    try { const saved = await api.addMilestone(regionId, milestone); applyGrow(saved); } catch (e) { console.error(e); }
-  };
-  const updateMilestone = async (regionId, milestone) => {
-    try { const saved = await api.updateMilestone(regionId, milestone.id, milestone); applyGrow(saved); } catch (e) { console.error(e); }
-  };
-  const toggleMilestone = async (regionId, milestoneId) => {
-    const region = regions.find((r) => r.id === regionId);
-    const ms = region?.milestones?.find((m) => m.id === milestoneId);
-    if (!ms) return;
-    try {
-      const saved = await api.updateMilestone(regionId, milestoneId, { done: !ms.done, doneTs: !ms.done ? new Date().toISOString() : null });
-      applyGrow(saved);
-    } catch (e) { console.error(e); }
-  };
-  const deleteMilestone = async (regionId, milestoneId) => {
-    try { const saved = await api.deleteMilestone(regionId, milestoneId); applyGrow(saved); } catch (e) { console.error(e); }
-  };
-
   const [bedForm, setBedForm] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
 
@@ -185,28 +149,6 @@ export default function App() {
   };
   const deleteBed = async (id) => {
     try { await api.deleteRegion(id); setRegions((rs) => rs.filter((r) => r.id !== id)); setSelected(null); setConfirmDelete(null); setView("garden"); } catch (e) { console.error(e); }
-  };
-
-  const genAllIcs = () => {
-    const lines = [
-      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//VisualSpam Garden//All Beds//EN",
-      "X-WR-CALNAME:VisualSpam Garden — All Milestones",
-    ];
-    regions.forEach((r) => {
-      (r.milestones || []).filter((m) => !m.done && m.deadline).forEach((ms) => {
-        const d = new Date(ms.deadline);
-        const dt = d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-        lines.push("BEGIN:VEVENT", `DTSTART:${dt}`, `DTEND:${dt}`, `SUMMARY:[${r.label}] ${ms.title}`, `DESCRIPTION:Bed: ${r.label} — ${STAGES[r.stage]?.label || r.stage}`, "END:VEVENT");
-      });
-    });
-    lines.push("END:VCALENDAR");
-    const blob = new Blob([lines.join("\r\n")], { type: "text/calendar" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "visualspam-garden.ics";
-    a.click();
-    URL.revokeObjectURL(url);
   };
 
   const viewBedDetail = (id) => { setView("bed"); setSelected(id); };
@@ -231,16 +173,6 @@ export default function App() {
     .sort((a, b) => new Date(b.ts) - new Date(a.ts))
     .slice(0, 8);
 
-  const byId = Object.fromEntries(regions.map((r) => [r.id, r]));
-  const H = clock.getHours();
-  let sched = {};
-  try { sched = JSON.parse(localStorage.getItem(`vsg_schedule_${dayKey(clock)}`)) || {}; } catch (e) { /* ignore */ }
-  const nextSlots = [];
-  for (let o = 0; o < 4 && H + o < 24; o++) {
-    const slot = sched[H + o];
-    if (slot) nextSlots.push({ h: H + o, slot });
-  }
-
   return (
     <div className="dash">
       <aside className="dash-left">
@@ -263,15 +195,9 @@ export default function App() {
             selected={timerPhase !== "idle" ? null : selected}
             timerId={timerPhase === "countdown" ? timerRegionId : null}
             onHover={setHover}
-            onSelect={setSelected}
-            onWater={(id, text) => tend(id, "water", text)}
-            onNote={(id, text) => tend(id, "note", text)}
-            onSetCrop={setCrop}
+            onSelect={viewBedDetail}
+            onWater={openWaterLog}
             onStartTimer={openPicker}
-            onAddMilestone={addMilestone}
-            onUpdateMilestone={updateMilestone}
-            onToggleMilestone={toggleMilestone}
-            onDeleteMilestone={deleteMilestone}
             onEditBed={(bed) => setBedForm(bed)}
             onDeleteBed={(id) => setConfirmDelete(id)}
           />
@@ -280,15 +206,9 @@ export default function App() {
             region={regions.find((r) => r.id === selected)}
             onBack={() => setView("garden")}
             onRefresh={refetchRegions}
-            onWater={(id, text) => tend(id, "water", text)}
-            onNote={(id, text) => tend(id, "note", text)}
-            onSetCrop={setCrop}
+            onWater={openWaterLog}
             onStartTimer={openPicker}
             timerRunning={timerPhase === "countdown" && timerRegionId === selected}
-            onAddMilestone={addMilestone}
-            onUpdateMilestone={updateMilestone}
-            onToggleMilestone={toggleMilestone}
-            onDeleteMilestone={deleteMilestone}
             onEditBed={(bed) => setBedForm(bed)}
             onDeleteBed={(id) => setConfirmDelete(id)}
           />
@@ -310,17 +230,12 @@ export default function App() {
         <ul className="bed-rail">
           {regions.map((r) => {
             const t = threadById[r.thread];
-            const st = STAGES[r.stage];
-            const idx = STAGE_ORDER.indexOf(r.stage);
             return (
               <li key={r.id} className="bed-rail-item" onClick={() => viewBedDetail(r.id)}>
                 <span className="bed-rail-dot" style={{ background: t?.color }} />
                 <span className="bed-rail-main">
                   <b>{r.label}</b>
-                  <span className="bed-rail-stage">{st.icon} {st.label}</span>
-                </span>
-                <span className="bed-rail-pips">
-                  {STAGE_ORDER.map((s, i) => <i key={s} className={i <= idx ? "on" : ""} style={{ background: i <= idx ? t?.color : undefined }} />)}
+                  <span className="bed-rail-stage">{t?.icon} {t?.label}</span>
                 </span>
               </li>
             );
@@ -339,11 +254,6 @@ export default function App() {
             </li>
           )) : <li className="feed-empty">no activity yet — tend a bed</li>}
         </ul>
-
-        <div className="rail-head rail-head-sub">📅 Sync</div>
-        <button className="rail-ics-btn" onClick={genAllIcs} title="Export all milestones as .ics calendar file">
-          📅 Export all milestones
-        </button>
       </aside>
 
       {timerPhase === "picking-plant" && timerRegion && (
@@ -379,11 +289,28 @@ export default function App() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <button className="modal-close" onClick={() => setConfirmDelete(null)}>✕</button>
             <h2 className="ms-title">Delete bed?</h2>
-            <p className="ms-region">This will remove {regions.find((r) => r.id === confirmDelete)?.label || "this bed"} and all its milestones.</p>
+            <p className="ms-region">This will remove {regions.find((r) => r.id === confirmDelete)?.label || "this bed"} and all its plants.</p>
             <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
               <button className="ms-save" style={{ flex: 1 }} onClick={() => deleteBed(confirmDelete)}>Delete</button>
               <button className="ed-clear" style={{ flex: 1 }} onClick={() => setConfirmDelete(null)}>Cancel</button>
             </div>
+          </div>
+        </div>
+      )}
+      {waterLog && (
+        <div className="modal-backdrop" onClick={() => setWaterLog(null)}>
+          <div className="modal water-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setWaterLog(null)}>✕</button>
+            <h2 className="ms-title">💧 Water log</h2>
+            <p className="ms-region">{regions.find((r) => r.id === waterLog)?.label}</p>
+            <div className="ms-field">
+              <label className="ms-label">What did you do?</label>
+              <input className="ms-input" autoFocus value={waterText}
+                onChange={(e) => setWaterText(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && submitWater()}
+                placeholder="e.g. reviewed code, went for a run…" />
+            </div>
+            <button className="ms-save" onClick={submitWater}>Log it</button>
           </div>
         </div>
       )}

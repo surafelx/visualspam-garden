@@ -13,6 +13,7 @@ const milestoneSchema = new mongoose.Schema({
   deadline: { type: Date, required: true },
   done: { type: Boolean, default: false },
   doneTs: { type: Date, default: null },
+  notes: { type: String, default: "" },
 }, { _id: false });
 
 const plantSchema = new mongoose.Schema({
@@ -33,15 +34,11 @@ const regionSchema = new mongoose.Schema({
   x: { type: Number, default: 50 },
   y: { type: Number, default: 50 },
   kind: { type: String, default: "greenhouse" },
-  stage: { type: String, enum: ["seed", "sprout", "growing", "flourishing"], default: "sprout" },
-  growth: { type: Number, default: 0 },
   tended: { type: Number, default: 0 },
   sunshine: { type: Number, default: 0 },
   lastTs: { type: Date, default: Date.now },
   note: { type: String, default: "" },
-  crop: { type: String, default: null },
   logs: [logSchema],
-  milestones: [milestoneSchema],
   plants: [plantSchema],
 }, { timestamps: true });
 

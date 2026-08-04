@@ -5,6 +5,7 @@ export default function MilestoneForm({ milestone, regionLabel, onSave, onCancel
   const [deadline, setDeadline] = useState(
     milestone?.deadline ? new Date(milestone.deadline).toISOString().split("T")[0] : ""
   );
+  const [notes, setNotes] = useState(milestone?.notes || "");
   const inputRef = useRef(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
@@ -12,11 +13,12 @@ export default function MilestoneForm({ milestone, regionLabel, onSave, onCancel
   const submit = () => {
     if (!title.trim() || !deadline) return;
     onSave({
-      id: milestone?.id || `ms_${Date.now()}`,
+      id: milestone?.id || `fruit_${Date.now()}`,
       title: title.trim(),
       deadline: new Date(deadline + "T23:59:59").toISOString(),
       done: milestone?.done || false,
       doneTs: milestone?.doneTs || null,
+      notes: notes.trim() || "",
     });
   };
 
@@ -24,7 +26,7 @@ export default function MilestoneForm({ milestone, regionLabel, onSave, onCancel
     <div className="modal-backdrop" onClick={onCancel}>
       <div className="modal milestone-form" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onCancel}>✕</button>
-        <h2 className="ms-title">{milestone ? "Edit" : "New"} milestone</h2>
+        <h2 className="ms-title">{milestone ? "Edit" : "New"} fruit</h2>
         <p className="ms-region">for {regionLabel}</p>
         <div className="ms-field">
           <label className="ms-label">What do you want to achieve?</label>
@@ -47,8 +49,18 @@ export default function MilestoneForm({ milestone, regionLabel, onSave, onCancel
             onChange={(e) => setDeadline(e.target.value)}
           />
         </div>
+        <div className="ms-field">
+          <label className="ms-label">Notes (optional)</label>
+          <textarea
+            className="ms-input"
+            rows={2}
+            placeholder="any notes…"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </div>
         <button className="ms-save" disabled={!title.trim() || !deadline} onClick={submit}>
-          {milestone ? "Save changes" : "Add milestone"}
+          {milestone ? "Save changes" : "Add fruit"}
         </button>
       </div>
     </div>

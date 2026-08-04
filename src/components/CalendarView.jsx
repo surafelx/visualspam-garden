@@ -15,19 +15,44 @@ const EVENT_ICON = { water: "💧", note: "✎", grow: "🌸", sun: "☀️", ch
 const EVENT_GROUP = { sun: "Sunshine", water: "Water", note: "Notes", grow: "Growth", checkin: "Check-in" };
 const GROUP_ORDER = ["sun", "water", "note", "grow", "checkin"];
 
+function getAllFruits(regions) {
+  const fruits = [];
+  regions.forEach((r) => {
+    (r.plants || []).forEach((p) => {
+      (p.fruits || []).forEach((f) => {
+        if (!f.done && f.deadline) {
+          const d = new Date(f.deadline);
+          const dk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          fruits.push({ ...f, bedId: r.id, bedLabel: r.label, plantId: p.id, plantName: p.name, dateKey: dk, color: threadById[r.thread]?.color });
+        }
+      });
+    });
+  });
+  return fruits;
+}
+
 const HEADER_PLANTS = [
   { kind: "tuft", x: 5 }, { kind: "daisy", x: 15 }, { kind: "flower", x: 28 },
   { kind: "tuft", x: 42 }, { kind: "daisy", x: 55 }, { kind: "flower", x: 68 },
   { kind: "tuft", x: 80 }, { kind: "daisy", x: 92 },
 ];
 
-function CalendarGrid({ year, month, activity, onSelectDay, selectedDay }) {
+function CalendarGrid({ year, month, activity, fruits, onSelectDay, selectedDay }) {
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const cells = [];
 
   for (let i = 0; i < firstDay; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  const fruitByDay = useMemo(() => {
+    const map = {};
+    fruits.forEach((f) => {
+      if (!map[f.dateKey]) map[f.dateKey] = [];
+      map[f.dateKey].push(f);
+    });
+    return map;
+  }, [fruits]);
 
   const { maxSun, maxActions } = useMemo(() => {
     let ms = 1, ma = 1;
@@ -52,15 +77,19 @@ function CalendarGrid({ year, month, activity, onSelectDay, selectedDay }) {
         if (day === null) return <div key={`empty-${i}`} className="cal-cell empty" />;
         const key = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
         const a = activity[key];
+        const dayFruits = fruitByDay[key] || [];
         const isSelected = selectedDay === key;
         const isToday = key === dayKey(new Date());
         const sunH = a && a.mins > 0 ? Math.max(10, (a.mins / maxSun) * 28) : 0;
         const actH = a && a.count > 0 ? Math.max(10, (a.count / maxActions) * 28) : 0;
         return (
           <button key={key}
-            className={`cal-cell ${a ? "has-activity" : ""} ${isSelected ? "selected" : ""} ${isToday ? "today" : ""}`}
+            className={`cal-cell ${(a || dayFruits.length > 0) ? "has-activity" : ""} ${isSelected ? "selected" : ""} ${isToday ? "today" : ""}`}
             onClick={() => onSelectDay(key)}>
             <span className="cal-day">{day}</span>
+            {dayFruits.length > 0 && (
+              <span className="cal-fruits">🍊{dayFruits.length}</span>
+            )}
             {a && (sunH > 0 || actH > 0) && (
               <span className="cal-bars">
                 {sunH > 0 && <span className="bar sun" style={{ height: `${sunH}px` }} title={`${a.mins}m sunshine`} />}
@@ -133,7 +162,7 @@ function MonthSummary({ year, month, activity }) {
   );
 }
 
-function DayModal({ dk, activity: a, onClose }) {
+function DayModal({ dk, activity: a, fruits, onClose }) {
   const [expanded, setExpanded] = useState(false);
   const [, m, d] = dk.split("-");
   const dateLabel = `${MONTH_NAMES[parseInt(m, 10) - 1]} ${parseInt(d, 10)}`;
@@ -144,7 +173,9 @@ function DayModal({ dk, activity: a, onClose }) {
     return () => document.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  if (!a) {
+  const dayFruits = fruits.filter((f) => f.dateKey === dk);
+
+  if (!a && dayFruits.length === 0) {
     return (
       <div className="modal-backdrop" onClick={onClose}>
         <div className="day-modal empty-day" onClick={(e) => e.stopPropagation()}>
@@ -161,9 +192,8 @@ function DayModal({ dk, activity: a, onClose }) {
     );
   }
 
-  const items = [...a.items].sort((x, y) => new Date(y.ts) - new Date(x.ts));
+  const items = a ? [...a.items].sort((x, y) => new Date(y.ts) - new Date(x.ts)) : [];
 
-  // group by type
   const groups = {};
   items.forEach((item) => {
     const g = item.type || "note";
@@ -180,10 +210,24 @@ function DayModal({ dk, activity: a, onClose }) {
         <div className="day-modal-header">
           <span className="day-modal-date">{dateLabel}</span>
           <span className="day-modal-stats">
-            {a.mins > 0 && <span className="dm-stat sun">☀️ {a.mins}m</span>}
-            {a.count > 0 && <span className="dm-stat">💧 {a.count}</span>}
+            {a?.mins > 0 && <span className="dm-stat sun">☀️ {a.mins}m</span>}
+            {a?.count > 0 && <span className="dm-stat">💧 {a.count}</span>}
           </span>
         </div>
+
+        {dayFruits.length > 0 && (
+          <div className="dm-fruits">
+            <h4 className="dm-group-title">🍊 Fruits due</h4>
+            <ul className="dm-group-list">
+              {dayFruits.map((f, i) => (
+                <li key={i} className="dm-entry">
+                  <span className="dm-dot" style={{ background: f.color }} />
+                  <span className="dm-text">{f.plantName} — {f.title}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="day-modal-groups">
           {shownGroups.map((gType) => {
@@ -231,6 +275,7 @@ export default function CalendarView({ regions, view, checkins = [] }) {
   const [transitioning, setTransitioning] = useState(false);
 
   const activity = activityByDay(regions, checkins);
+  const fruits = useMemo(() => getAllFruits(regions), [regions]);
 
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
 
@@ -296,7 +341,7 @@ export default function CalendarView({ regions, view, checkins = [] }) {
       <MonthSummary year={year} month={month} activity={activity} />
 
       <div className={`cal-grid-wrap ${transitioning ? "fade" : ""}`}>
-        <CalendarGrid year={year} month={month} activity={activity}
+        <CalendarGrid year={year} month={month} activity={activity} fruits={fruits}
           onSelectDay={(k) => setSelectedDay(k === selectedDay ? null : k)}
           selectedDay={selectedDay} />
       </div>
@@ -309,7 +354,7 @@ export default function CalendarView({ regions, view, checkins = [] }) {
       </div>
 
       {selectedDay && (
-        <DayModal dk={selectedDay} activity={selectedActivity} onClose={() => setSelectedDay(null)} />
+        <DayModal dk={selectedDay} activity={selectedActivity} fruits={fruits} onClose={() => setSelectedDay(null)} />
       )}
     </div>
   );

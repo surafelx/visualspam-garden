@@ -1,6 +1,3 @@
-// In dev the client (:5200) talks to the API server (:4000). In production the
-// server serves the built client, so a same-origin relative "/api" works.
-// Override anytime with VITE_API_URL (e.g. a separate API host).
 const BASE = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:4000/api" : "/api");
 
 async function request(path, opts = {}) {
@@ -19,21 +16,12 @@ export const createRegion = (data) => request("/regions", { method: "POST", body
 export const updateRegion = (id, data) => request(`/regions/${id}`, { method: "PUT", body: data });
 export const deleteRegion = (id) => request(`/regions/${id}`, { method: "DELETE" });
 
-// ── Milestones ──
-export const addMilestone = (regionId, milestone) => request(`/regions/${regionId}/milestones`, { method: "POST", body: milestone });
-export const updateMilestone = (regionId, msId, data) => request(`/regions/${regionId}/milestones/${msId}`, { method: "PUT", body: data });
-export const deleteMilestone = (regionId, msId) => request(`/regions/${regionId}/milestones/${msId}`, { method: "DELETE" });
-
-// ── Analysis ──
-export const analyzeAll = () => request("/regions/all/analyze");
-export const analyzeBed = (id) => request(`/regions/${id}/analyze`);
-
-// ── Plants (sub-plants within a bed) ──
+// ── Plants ──
 export const addPlant = (regionId, plant) => request(`/regions/${regionId}/plants`, { method: "POST", body: plant });
 export const updatePlant = (regionId, plantId, data) => request(`/regions/${regionId}/plants/${plantId}`, { method: "PUT", body: data });
 export const deletePlant = (regionId, plantId) => request(`/regions/${regionId}/plants/${plantId}`, { method: "DELETE" });
 
-// ── Fruits (milestones on a specific plant) ──
+// ── Fruits (on a specific plant) ──
 export const addFruit = (regionId, plantId, fruit) => request(`/regions/${regionId}/plants/${plantId}/fruits`, { method: "POST", body: fruit });
 export const updateFruit = (regionId, plantId, fruitId, data) => request(`/regions/${regionId}/plants/${plantId}/fruits/${fruitId}`, { method: "PUT", body: data });
 export const deleteFruit = (regionId, plantId, fruitId) => request(`/regions/${regionId}/plants/${plantId}/fruits/${fruitId}`, { method: "DELETE" });
