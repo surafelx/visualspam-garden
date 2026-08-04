@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
-import { STAGE_ORDER, GROWTH_PER_STAGE, STAGES, threadById } from "./data.js";
+import { STAGE_ORDER, GROWTH_PER_STAGE, STAGES, threadById, timeAgo } from "./data.js";
+
+const FEED_ICON = { water: "💧", note: "✎", grow: "🌸", sun: "☀️", checkin: "🌱" };
 import * as api from "./api.js";
 import GardenScene from "./components/GardenScene.jsx";
 import Library from "./components/Library.jsx";
 import CalendarView from "./components/CalendarView.jsx";
+import DaySchedule from "./components/DaySchedule.jsx";
 import DurationPicker from "./components/DurationPicker.jsx";
 import CountdownTimer from "./components/CountdownTimer.jsx";
 
@@ -133,6 +136,7 @@ export default function App() {
 
   const NAV = [
     { id: "garden", icon: "🌱", label: "Garden" },
+    { id: "day", icon: "🕐", label: "Day plan" },
     { id: "calendar", icon: "📅", label: "Timeline" },
     { id: "library", icon: "📖", label: "Library" },
   ];
@@ -140,6 +144,10 @@ export default function App() {
     const days = (Date.now() - new Date(r.lastTs).getTime()) / 864e5;
     return days >= 4;
   }).length;
+  const recent = regions
+    .flatMap((r) => (r.logs || []).map((l) => ({ ...l, region: r.label, color: threadById[r.thread]?.color })))
+    .sort((a, b) => new Date(b.ts) - new Date(a.ts))
+    .slice(0, 8);
 
   return (
     <div className="dash">
@@ -174,6 +182,8 @@ export default function App() {
             onToggleMilestone={toggleMilestone}
             onDeleteMilestone={deleteMilestone}
           />
+        ) : view === "day" ? (
+          <DaySchedule />
         ) : view === "calendar" ? (
           <CalendarView regions={regions} view={view} />
         ) : (
@@ -205,6 +215,19 @@ export default function App() {
               </li>
             );
           })}
+        </ul>
+
+        <div className="rail-head rail-head-sub">Recent</div>
+        <ul className="log-feed">
+          {recent.length ? recent.map((l, i) => (
+            <li key={i} className="feed-item">
+              <span className="feed-dot" style={{ background: l.color }} />
+              <span className="feed-main">
+                <span className="feed-text">{FEED_ICON[l.type] || "•"} {l.text}</span>
+                <span className="feed-sub">{l.region} · {timeAgo(l.ts)}</span>
+              </span>
+            </li>
+          )) : <li className="feed-empty">no activity yet — tend a bed</li>}
         </ul>
       </aside>
 
