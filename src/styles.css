@@ -668,3 +668,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 .dur-btn:disabled { opacity: 0.4; cursor: default; }
 .dur-val { min-width: 30px; text-align: center; font-size: 0.85rem; color: #2c2920; font-variant-numeric: tabular-nums; }
 .dur-until { font-size: 0.72rem; color: #a39a86; }
+
+/* the floating now-widget must size to its content (the .dash-main > * height
+   rule is only meant for the full view, not the overlay) */
+.now-float { height: auto !important; }
