@@ -2,12 +2,11 @@ services:
   - type: web
     name: visualspam-garden-api
     runtime: node
-    buildCommand: npm install
+    rootDir: ..
+    buildCommand: npm install && cd server && npm install && cd .. && npm run build
     startCommand: npm start
     envVars:
       - key: MONGO_URI
         sync: false
       - key: NODE_ENV
         value: production
-      - key: SERVE_CLIENT
-        value: false
