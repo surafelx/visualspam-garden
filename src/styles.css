@@ -826,16 +826,16 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 /* ── garden clock bar (top of garden view) ── */
 .garden-clock-bar {
   position: absolute; top: 0; left: 0; right: 0; z-index: 20;
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
   padding: 20px 24px 14px;
   background: linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.6) 70%, transparent 100%);
   pointer-events: none;
 }
 .garden-clock-bar > * { pointer-events: auto; }
-.garden-clock { text-align: right; }
-.garden-clock-time { display: block; font-size: 3.8rem; line-height: 1; color: #2b2820; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-.garden-clock-date { display: block; font-size: 0.82rem; color: #8a8471; margin-top: 2px; letter-spacing: 0.02em; }
-.garden-schedule { display: flex; flex-direction: column; gap: 2px; max-width: 280px; }
+.garden-clock { text-align: center; }
+.garden-clock-time { display: block; font-size: 5rem; line-height: 1; color: #2b2820; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; font-weight: 700; }
+.garden-clock-date { display: block; font-size: 0.9rem; color: #8a8471; margin-top: 4px; letter-spacing: 0.02em; }
+.garden-schedule { display: flex; flex-direction: row; gap: 8px; max-width: 600px; flex-wrap: wrap; justify-content: center; }
 .garden-sched-item {
   display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 8px;
   font-size: 0.78rem; color: #4a463c; cursor: pointer; transition: background 0.12s;
