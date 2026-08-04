@@ -243,34 +243,6 @@ export default function App() {
       </aside>
 
       <main className="dash-main">
-        {view === "garden" && (
-          <div className="garden-clock-bar">
-            <div className="garden-clock">
-              <span className="garden-clock-time">{fmtHour(H)}:{String(clock.getMinutes()).padStart(2, "0")}</span>
-              <span className="garden-clock-date">{WEEKDAY_FULL[clock.getDay()]}, {MONTH[clock.getMonth()]} {clock.getDate()}</span>
-            </div>
-            {nextSlots.length > 0 && (
-              <div className="garden-schedule">
-                {nextSlots.map(({ h, slot }) => {
-                  const bed = slot?.bedId ? byId[slot.bedId] : null;
-                  const t = bed ? threadById[bed.thread] : null;
-                  return (
-                    <div key={h} className={`garden-sched-item ${h === H ? "now" : ""}`} onClick={() => setView("day")}>
-                      <span className="garden-sched-time">{fmtHour(h)}</span>
-                      {t && <span className="garden-sched-dot" style={{ background: t.color }} />}
-                      <span className="garden-sched-text">
-                        {bed ? <><b>{bed.label}</b>{slot.text ? ` · ${slot.text}` : ""}</> : (slot?.text || "open")}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-        {view === "garden" && aiInsight && (
-          <div className="ai-insight-bar">{aiInsight}</div>
-        )}
         {view === "garden" ? (
           <GardenScene
             regions={regions}

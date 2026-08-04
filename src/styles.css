@@ -479,10 +479,10 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 /* centre panel holds the active view (garden fills it) */
 .dash-main {
   position: relative; min-height: 0; border-radius: 18px; overflow: hidden;
-  background: #f4f6ef; border: 1px solid #dfe3d6; box-shadow: 0 12px 34px -20px rgba(0,0,0,0.35);
+  background: transparent; border: none; box-shadow: none;
 }
 .dash-main > * { height: 100%; }
-.dash-main .field, .dash-main .library { height: 100%; }
+.dash-main .garden-dash, .dash-main .library { height: 100%; }
 
 /* right rail: your beds at a glance */
 .dash-right {
