@@ -24,6 +24,7 @@ function BedCard({ region, onSelect, onStartTimer, onWater }) {
       </div>
       <div className="g-card-mid">
         <div className="g-card-name">{region.label}</div>
+        {region.note && <div className="g-card-summary">{region.note}</div>}
       </div>
       <div className="g-card-stats">
         <span className="g-stat"><span className="g-stat-icon">☀️</span><span className="g-stat-val">{region.sunshine || 0}</span><span className="g-stat-unit">m</span></span>
@@ -40,10 +41,10 @@ function BedCard({ region, onSelect, onStartTimer, onWater }) {
       )}
       <div className="g-card-actions">
         <button className="g-card-action g-card-water" title="Water" onClick={(e) => { e.stopPropagation(); onWater(region.id); }}>
-          <span className="gca-icon">💧</span><span className="gca-label">Water</span>
+          Water
         </button>
         <button className="g-card-action g-card-sun" title="Give sunshine" onClick={(e) => { e.stopPropagation(); onStartTimer(region.id); }}>
-          <span className="gca-icon">☀️</span><span className="gca-label">Sun</span>
+          Sunshine
         </button>
       </div>
     </button>

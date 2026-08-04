@@ -82,14 +82,19 @@ export default function App() {
     return () => clearInterval(id);
   }, []);
 
+  // Water: phase can be "picking-plant", "picking-fruit", or "logging"
+  const [waterPhase, setWaterPhase] = useState("idle");
+  const [waterRegionId, setWaterRegionId] = useState(null);
+  const [waterPlantId, setWaterPlantId] = useState(null);
+  const [waterFruitId, setWaterFruitId] = useState(null);
+  const [waterText, setWaterText] = useState("");
+
+  // Sunshine: phase can be "picking-plant", "picking-fruit", "picking", or "countdown"
   const [timerPhase, setTimerPhase] = useState("idle");
   const [timerRegionId, setTimerRegionId] = useState(null);
   const [timerPlantId, setTimerPlantId] = useState(null);
+  const [timerFruitId, setTimerFruitId] = useState(null);
   const [timerMins, setTimerMins] = useState(0);
-
-  // Water log modal
-  const [waterLog, setWaterLog] = useState(null);
-  const [waterText, setWaterText] = useState("");
 
   const applyGrow = (regionData) => {
     setRegions((rs) => rs.map((r) => r.id === regionData.id ? regionData : r));
@@ -108,35 +113,73 @@ export default function App() {
     } catch (e) { console.error(e); }
   };
 
-  const openWaterLog = (id) => { setWaterLog(id); setWaterText(""); };
-  const submitWater = () => {
-    if (!waterLog) return;
-    const text = waterText.trim() || "watered";
-    grow(waterLog, { type: "water", text });
-    setWaterLog(null); setWaterText("");
+  // ── Water flow ──
+  const openWater = (id) => {
+    setWaterRegionId(id);
+    const region = regions.find((r) => r.id === id);
+    if (region?.plants?.length > 0) setWaterPhase("picking-plant");
+    else setWaterPhase("logging");
   };
+  const waterPickPlant = (plantId) => {
+    setWaterPlantId(plantId);
+    const region = regions.find((r) => r.id === waterRegionId);
+    const plant = region?.plants?.find((p) => p.id === plantId);
+    if (plant?.fruits?.filter((f) => !f.done).length > 0) setWaterPhase("picking-fruit");
+    else setWaterPhase("logging");
+  };
+  const waterPickFruit = (fruitId) => { setWaterFruitId(fruitId); setWaterPhase("logging"); };
+  const waterSkipFruit = () => { setWaterFruitId(null); setWaterPhase("logging"); };
+  const submitWater = () => {
+    if (!waterRegionId) return;
+    const region = regions.find((r) => r.id === waterRegionId);
+    const plant = waterPlantId ? region?.plants?.find((p) => p.id === waterPlantId) : null;
+    const fruit = waterFruitId && plant ? (plant.fruits || []).find((f) => f.id === waterFruitId) : null;
+    const parts = ["watered"];
+    if (plant) parts[0] = `watered ${plant.name}`;
+    if (fruit) parts[0] += ` — ${fruit.title}`;
+    const text = waterText.trim() ? `${parts[0]} — ${waterText.trim()}` : parts[0];
+    grow(waterRegionId, { type: "water", text });
+    setWaterPhase("idle"); setWaterRegionId(null); setWaterPlantId(null); setWaterFruitId(null); setWaterText("");
+  };
+  const cancelWater = () => { setWaterPhase("idle"); setWaterRegionId(null); setWaterPlantId(null); setWaterFruitId(null); setWaterText(""); };
 
+  const waterRegion = waterRegionId && regions.find((r) => r.id === waterRegionId);
+  const waterPlant = waterPlantId && waterRegion?.plants?.find((p) => p.id === waterPlantId);
+
+  // ── Sunshine flow ──
   const openPicker = (id) => {
     setTimerRegionId(id);
     const region = regions.find((r) => r.id === id);
     if (region?.plants?.length > 0) setTimerPhase("picking-plant");
     else setTimerPhase("picking");
   };
-  const pickPlant = (plantId) => { setTimerPlantId(plantId); setTimerPhase("picking"); };
+  const pickPlant = (plantId) => {
+    setTimerPlantId(plantId);
+    const region = regions.find((r) => r.id === timerRegionId);
+    const plant = region?.plants?.find((p) => p.id === plantId);
+    if (plant?.fruits?.filter((f) => !f.done).length > 0) setTimerPhase("picking-fruit");
+    else setTimerPhase("picking");
+  };
+  const pickFruit = (fruitId) => { setTimerFruitId(fruitId); setTimerPhase("picking"); };
+  const skipFruit = () => { setTimerFruitId(null); setTimerPhase("picking"); };
   const startCountdown = (mins) => { setTimerMins(mins); setTimerPhase("countdown"); };
-  const cancelTimer = () => { setTimerPhase("idle"); setTimerRegionId(null); setTimerPlantId(null); setTimerMins(0); };
+  const cancelTimer = () => { setTimerPhase("idle"); setTimerRegionId(null); setTimerPlantId(null); setTimerFruitId(null); setTimerMins(0); };
   const completeCountdown = (mins, note) => {
     if (timerRegionId) {
       const region = regions.find((r) => r.id === timerRegionId);
       const plant = timerPlantId ? region?.plants?.find((p) => p.id === timerPlantId) : null;
-      const plantName = plant ? ` — ${plant.name}` : "";
-      const text = note ? `${mins}m of sunshine${plantName} — ${note}` : `${mins}m of sunshine${plantName}`;
+      const fruit = timerFruitId && plant ? (plant.fruits || []).find((f) => f.id === timerFruitId) : null;
+      const parts = [`${mins}m of sunshine`];
+      if (plant) parts[0] += ` — ${plant.name}`;
+      if (fruit) parts[0] += ` — ${fruit.title}`;
+      const text = note ? `${parts[0]} — ${note}` : parts[0];
       grow(timerRegionId, { type: "sun", text, mins }, (r) => ({ sunshine: (r.sunshine || 0) + mins }));
     }
-    setTimerPhase("idle"); setTimerRegionId(null); setTimerPlantId(null); setTimerMins(0);
+    setTimerPhase("idle"); setTimerRegionId(null); setTimerPlantId(null); setTimerFruitId(null); setTimerMins(0);
   };
 
   const timerRegion = timerRegionId && regions.find((r) => r.id === timerRegionId);
+  const timerPlant = timerPlantId && timerRegion?.plants?.find((p) => p.id === timerPlantId);
 
   const [bedForm, setBedForm] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
@@ -215,7 +258,7 @@ export default function App() {
             timerId={timerPhase === "countdown" ? timerRegionId : null}
             onHover={setHover}
             onSelect={viewBedDetail}
-            onWater={openWaterLog}
+            onWater={openWater}
             onStartTimer={openPicker}
             onEditBed={(bed) => setBedForm(bed)}
             onDeleteBed={(id) => setConfirmDelete(id)}
@@ -225,7 +268,7 @@ export default function App() {
             region={regions.find((r) => r.id === selected)}
             onBack={() => setView("garden")}
             onRefresh={refetchRegions}
-            onWater={openWaterLog}
+            onWater={openWater}
             onStartTimer={openPicker}
             timerRunning={timerPhase === "countdown" && timerRegionId === selected}
             onEditBed={(bed) => setBedForm(bed)}
@@ -302,11 +345,12 @@ export default function App() {
         </ul>
       </aside>
 
+      {/* ── Sunshine: pick plant ── */}
       {timerPhase === "picking-plant" && timerRegion && (
         <div className="modal-backdrop" onClick={cancelTimer}>
           <div className="modal plant-picker" onClick={(e) => e.stopPropagation()}>
             <button className="modal-close" onClick={cancelTimer}>✕</button>
-            <h2 className="ms-title">Choose a plant</h2>
+            <h2 className="ms-title">☀️ Choose a plant</h2>
             <p className="ms-region">in {timerRegion.label}</p>
             <div className="pp-list">
               {timerRegion.plants.map((p) => (
@@ -316,18 +360,110 @@ export default function App() {
                 </button>
               ))}
             </div>
-            <button className="ms-save" style={{ marginTop: 12 }} onClick={() => { setTimerPlantId(null); setTimerPhase("picking"); }}>
+            <button className="ms-save" style={{ marginTop: 12 }} onClick={() => { setTimerPlantId(null); setTimerFruitId(null); setTimerPhase("picking"); }}>
               Skip — sunshine for whole bed
             </button>
           </div>
         </div>
       )}
+
+      {/* ── Sunshine: pick fruit ── */}
+      {timerPhase === "picking-fruit" && timerPlant && (
+        <div className="modal-backdrop" onClick={cancelTimer}>
+          <div className="modal plant-picker" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={cancelTimer}>✕</button>
+            <h2 className="ms-title">☀️ Choose a fruit</h2>
+            <p className="ms-region">{timerPlant.name}</p>
+            <div className="pp-list">
+              {(timerPlant.fruits || []).filter((f) => !f.done).map((f) => (
+                <button key={f.id} className="pp-item" onClick={() => pickFruit(f.id)}>
+                  <span className="pp-name">🍊 {f.title}</span>
+                </button>
+              ))}
+            </div>
+            <button className="ms-save" style={{ marginTop: 12 }} onClick={skipFruit}>
+              Skip — sunshine for whole plant
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Sunshine: pick duration ── */}
       {timerPhase === "picking" && timerRegion && (
         <DurationPicker regionLabel={timerRegion.label} onStart={startCountdown} onCancel={cancelTimer} />
       )}
+
+      {/* ── Sunshine: countdown ── */}
       {timerPhase === "countdown" && timerRegion && (
         <CountdownTimer regionLabel={timerRegion.label} durationMins={timerMins} onComplete={completeCountdown} onCancel={cancelTimer} />
       )}
+
+      {/* ── Water: pick plant ── */}
+      {waterPhase === "picking-plant" && waterRegion && (
+        <div className="modal-backdrop" onClick={cancelWater}>
+          <div className="modal plant-picker" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={cancelWater}>✕</button>
+            <h2 className="ms-title">💧 Choose a plant</h2>
+            <p className="ms-region">in {waterRegion.label}</p>
+            <div className="pp-list">
+              {waterRegion.plants.map((p) => (
+                <button key={p.id} className="pp-item" onClick={() => waterPickPlant(p.id)}>
+                  <span className="pp-name">{p.name}</span>
+                  <span className="pp-crop">{p.crop}</span>
+                </button>
+              ))}
+            </div>
+            <button className="ms-save" style={{ marginTop: 12 }} onClick={() => { setWaterPlantId(null); setWaterFruitId(null); setWaterPhase("logging"); }}>
+              Skip — water whole bed
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Water: pick fruit ── */}
+      {waterPhase === "picking-fruit" && waterPlant && (
+        <div className="modal-backdrop" onClick={cancelWater}>
+          <div className="modal plant-picker" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={cancelWater}>✕</button>
+            <h2 className="ms-title">💧 Choose a fruit</h2>
+            <p className="ms-region">{waterPlant.name}</p>
+            <div className="pp-list">
+              {(waterPlant.fruits || []).filter((f) => !f.done).map((f) => (
+                <button key={f.id} className="pp-item" onClick={() => waterPickFruit(f.id)}>
+                  <span className="pp-name">🍊 {f.title}</span>
+                </button>
+              ))}
+            </div>
+            <button className="ms-save" style={{ marginTop: 12 }} onClick={waterSkipFruit}>
+              Skip — water whole plant
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Water: log ── */}
+      {waterPhase === "logging" && waterRegion && (
+        <div className="modal-backdrop" onClick={cancelWater}>
+          <div className="modal water-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={cancelWater}>✕</button>
+            <h2 className="ms-title">💧 Water log</h2>
+            <p className="ms-region">
+              {waterRegion.label}
+              {waterPlant ? ` → ${waterPlant.name}` : ""}
+              {waterFruitId && waterPlant ? ` → ${(waterPlant.fruits || []).find((f) => f.id === waterFruitId)?.title || ""}` : ""}
+            </p>
+            <div className="ms-field">
+              <label className="ms-label">What did you do?</label>
+              <input className="ms-input" autoFocus value={waterText}
+                onChange={(e) => setWaterText(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && submitWater()}
+                placeholder="e.g. reviewed code, went for a run…" />
+            </div>
+            <button className="ms-save" onClick={submitWater}>Log it</button>
+          </div>
+        </div>
+      )}
+
       {bedForm === "new" && <BedForm onSave={createBed} onCancel={() => setBedForm(null)} />}
       {bedForm && bedForm !== "new" && <BedForm bed={bedForm} onSave={updateBed} onCancel={() => setBedForm(null)} />}
       {confirmDelete && (
@@ -340,23 +476,6 @@ export default function App() {
               <button className="ms-save" style={{ flex: 1 }} onClick={() => deleteBed(confirmDelete)}>Delete</button>
               <button className="ed-clear" style={{ flex: 1 }} onClick={() => setConfirmDelete(null)}>Cancel</button>
             </div>
-          </div>
-        </div>
-      )}
-      {waterLog && (
-        <div className="modal-backdrop" onClick={() => setWaterLog(null)}>
-          <div className="modal water-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setWaterLog(null)}>✕</button>
-            <h2 className="ms-title">💧 Water log</h2>
-            <p className="ms-region">{regions.find((r) => r.id === waterLog)?.label}</p>
-            <div className="ms-field">
-              <label className="ms-label">What did you do?</label>
-              <input className="ms-input" autoFocus value={waterText}
-                onChange={(e) => setWaterText(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && submitWater()}
-                placeholder="e.g. reviewed code, went for a run…" />
-            </div>
-            <button className="ms-save" onClick={submitWater}>Log it</button>
           </div>
         </div>
       )}
