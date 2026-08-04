@@ -633,3 +633,25 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
   box-shadow: 0 14px 34px -16px rgba(30, 40, 20, 0.5);
 }
 @media (max-width: 900px) { .now-float { width: 200px; } }
+
+/* refined floating now-widget — cleaner, lighter, aligned to the garden corner */
+.now-float {
+  top: 20px !important; left: 20px !important; width: 208px !important; padding: 14px 16px !important;
+  background: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(9px) saturate(1.1) !important; -webkit-backdrop-filter: blur(9px) saturate(1.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.85) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 12px 30px -16px rgba(20, 40, 15, 0.5) !important;
+}
+.now-float .now-time { flex-direction: column; align-items: flex-start; gap: 2px; margin-bottom: 12px; }
+.now-float .now-clock { font-size: 2rem; line-height: 1; color: #2b2820; }
+.now-float .now-date { font-size: 0.72rem; color: #8a8471; letter-spacing: 0.02em; }
+.now-float .now-next { gap: 0; }
+.now-float .now-next li { padding: 5px 6px; font-size: 0.76rem; border-radius: 7px; }
+.now-float .now-next li:not(.on):hover { background: rgba(0,0,0,0.04); }
+.now-float .now-next li.on { background: #fff; box-shadow: inset 0 0 0 1px rgba(224,137,74,0.35); }
+.now-float .now-h { width: 40px; }
+.now-float .now-plan-btn {
+  margin-top: 6px; padding: 4px 6px; text-align: left; background: none; color: #6d8a5f; font-size: 0.72rem;
+}
+.now-float .now-plan-btn:hover { background: none; color: #4c9a63; text-decoration: underline; }
