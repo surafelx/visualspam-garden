@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { threadById, STAGES, STAGE_ORDER, GROWTH_PER_STAGE, timeAgo, needsWater, CROP_CHOICES, milestoneStatus } from "../data.js";
 import { PixelSprite } from "../pixels.jsx";
 import MilestoneForm from "./MilestoneForm.jsx";
@@ -174,6 +174,8 @@ export default function BedDetailPage({ region, onBack, onRefresh, onWater, onNo
   const [msForm, setMsForm] = useState(null);
   const [plantForm, setPlantForm] = useState(null);
   const [noteText, setNoteText] = useState("");
+  const regionRef = useRef(region);
+  useEffect(() => { regionRef.current = region; }, [region]);
   const t = threadById[region.thread];
   const st = STAGES[region.stage];
   const thirsty = needsWater(region.lastTs);
@@ -207,11 +209,11 @@ export default function BedDetailPage({ region, onBack, onRefresh, onWater, onNo
   };
 
   const handleAddPlant = async (plant) => {
-    try { await api.addPlant(region.id, plant); onRefresh?.(); } catch (e) { console.error(e); }
+    try { await api.addPlant(regionRef.current.id, plant); onRefresh?.(); } catch (e) { console.error(e); }
     setPlantForm(null);
   };
   const handleEditPlant = async (plant) => {
-    try { await api.updatePlant(region.id, plant.id, plant); onRefresh?.(); } catch (e) { console.error(e); }
+    try { await api.updatePlant(regionRef.current.id, plant.id, plant); onRefresh?.(); } catch (e) { console.error(e); }
     setPlantForm(null);
   };
   const handleDeletePlant = async (regionId, plantId) => {
