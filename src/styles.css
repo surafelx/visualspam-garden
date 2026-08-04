@@ -38,7 +38,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 .plot {
   position: relative; width: min(900px, 94vw); padding: 30px 26px;
   border-radius: 6px;
-  background: radial-gradient(130% 110% at 50% 0%, #71502f 0%, #5c3f27 75%);
+  background: #6a4a30;
   box-shadow:
     inset 0 0 0 5px #573a22,
     0 0 0 6px var(--wood), 0 0 0 9px var(--wood-2),
@@ -53,13 +53,13 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
   position: relative; width: 100%; min-height: 110px;
   display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px;
   padding: 10px 6px; border-radius: 10px;
-  background: rgba(255,255,255,0.18); border: 1.5px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.85); border: 1.5px solid rgba(255,255,255,0.9);
   transition: transform 0.14s ease, background 0.14s, border-color 0.14s;
 }
 .bed:hover, .bed.on {
   transform: translateY(-3px);
-  background: rgba(255,255,255,0.28);
-  border-color: var(--rc, rgba(255,255,255,0.5));
+  background: #fff;
+  border-color: var(--rc, #8fe39a);
 }
 .bed:hover .crops, .bed.on .crops { filter: drop-shadow(0 0 7px var(--rc)); }
 .bed.thirsty { border-color: #7cb8d6; }
@@ -828,7 +828,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
   position: absolute; top: 0; left: 0; right: 0; z-index: 20;
   display: flex; flex-direction: column; align-items: center; gap: 8px;
   padding: 20px 24px 14px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.6) 70%, transparent 100%);
+  background: rgba(255,255,255,0.92);
   pointer-events: none;
 }
 .garden-clock-bar > * { pointer-events: auto; }
@@ -1034,7 +1034,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 
 .lp-hero {
   padding: 100px 40px 60px; text-align: center;
-  background: linear-gradient(180deg, var(--grass) 0%, #64a440 100%);
+  background: var(--grass);
   color: #eef3ea;
 }
 .lp-hero-content { max-width: 600px; margin: 0 auto; }

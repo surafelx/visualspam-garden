@@ -1,8 +1,7 @@
-import { useState, useRef, useCallback } from "react";
+import { useState } from "react";
 import { threadById, STAGES, STAGE_ORDER, GROWTH_PER_STAGE, timeAgo, needsWater, CROP_CHOICES, milestoneStatus } from "../data.js";
 import { PixelSprite } from "../pixels.jsx";
 import MilestoneForm from "./MilestoneForm.jsx";
-import * as api from "../api.js";
 
 const CROP = {
   technology: "leafy", philosophy: "cabbage", business: "carrot",
@@ -197,40 +196,19 @@ function BedTooltip({ region }) {
   );
 }
 
-function Bed({ region, active, thirsty, onHover, onSelect, selected, onStartTimer, onDragStart, onDragEnd }) {
+function Bed({ region, active, thirsty, onHover, onSelect, selected, onStartTimer }) {
   const t = threadById[region.thread];
   const st = STAGES[region.stage];
   const kind = cropSprite(region);
   const count = region.id === "rest" ? 1 : 3;
   const size = region.id === "rest" ? 64 : region.stage === "flourishing" ? 40 : region.stage === "seed" ? 30 : 36;
-  const dragging = useRef(false);
-  const startPos = useRef({ x: 0, y: 0 });
-
-  const handlePointerDown = (e) => {
-    if (e.target.closest(".bed-sun-btn")) return;
-    dragging.current = false;
-    startPos.current = { x: e.clientX, y: e.clientY };
-    const handleMove = (ev) => {
-      const dx = Math.abs(ev.clientX - startPos.current.x);
-      const dy = Math.abs(ev.clientY - startPos.current.y);
-      if (dx > 4 || dy > 4) dragging.current = true;
-    };
-    const handleUp = () => {
-      window.removeEventListener("pointermove", handleMove);
-      window.removeEventListener("pointerup", handleUp);
-      if (dragging.current) onDragEnd?.(region.id, e.clientX, e.clientY);
-    };
-    window.addEventListener("pointermove", handleMove);
-    window.addEventListener("pointerup", handleUp);
-  };
 
   return (
     <button
       className={`bed stage-${region.stage} ${active ? "on" : ""} ${thirsty ? "thirsty" : ""}`}
       style={{ "--rc": t?.color, left: `${region.x}%`, top: `${region.y}%` }}
       onMouseEnter={() => onHover(region.id)} onMouseLeave={() => onHover(null)}
-      onClick={(e) => { if (!dragging.current) { e.stopPropagation(); onSelect(region.id === selected ? null : region.id); } }}
-      onPointerDown={handlePointerDown}>
+      onClick={(e) => { e.stopPropagation(); onSelect(region.id === selected ? null : region.id); }}>
       {thirsty && <span className="thirst-badge" title="needs water">💧</span>}
       <button className="bed-sun-btn" title="Give sunshine"
         onClick={(e) => { e.stopPropagation(); onStartTimer(region.id); }}>☀️</button>
@@ -249,20 +227,6 @@ export default function GardenScene({ regions, hover, selected, timerId, onHover
   const sel = regions.find((r) => r.id === selected);
   const thirstyCount = regions.filter((r) => needsWater(r.lastTs)).length;
   const hoveredRegion = hover ? regions.find((r) => r.id === hover) : null;
-  const plotRef = useRef(null);
-
-  const handleDragEnd = useCallback(async (id, clientX, clientY) => {
-    const plot = plotRef.current;
-    if (!plot) return;
-    const rect = plot.getBoundingClientRect();
-    const x = Math.round(Math.max(5, Math.min(95, ((clientX - rect.left) / rect.width) * 100)));
-    const y = Math.round(Math.max(5, Math.min(95, ((clientY - rect.top) / rect.height) * 100)));
-    try {
-      const saved = await api.updateRegion(id, { x, y });
-      onSelect(null);
-      window.dispatchEvent(new CustomEvent("vsg-region-updated", { detail: saved }));
-    } catch (e) { console.error(e); }
-  }, [onSelect]);
 
   return (
     <section className="field" onClick={() => onSelect(null)}>
@@ -276,13 +240,12 @@ export default function GardenScene({ regions, hover, selected, timerId, onHover
         <div className="thirst-summary">💧 {thirstyCount} {thirstyCount === 1 ? "bed needs" : "beds need"} water</div>
       )}
 
-      <div className="garden-canvas" ref={plotRef} onClick={(e) => e.stopPropagation()}>
+      <div className="garden-canvas" onClick={(e) => e.stopPropagation()}>
         {regions.map((r) => (
           <Bed key={r.id} region={r} selected={selected}
             active={hover === r.id || selected === r.id}
             thirsty={needsWater(r.lastTs)}
-            onHover={onHover} onSelect={onSelect} onStartTimer={onStartTimer}
-            onDragEnd={handleDragEnd} />
+            onHover={onHover} onSelect={onSelect} onStartTimer={onStartTimer} />
         ))}
         {hoveredRegion && !selected && <BedTooltip region={hoveredRegion} />}
       </div>
