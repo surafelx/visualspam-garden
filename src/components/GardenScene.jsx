@@ -227,7 +227,7 @@ function Bed({ region, active, thirsty, onHover, onSelect, selected, onStartTime
 }
 
 export default function GardenScene({ regions, hover, selected, timerId, onHover, onSelect, onWater, onNote, onSetCrop, onStartTimer,
-  onAddMilestone, onUpdateMilestone, onToggleMilestone, onDeleteMilestone, onEditBed, onDeleteBed, onAnalyze }) {
+  onAddMilestone, onUpdateMilestone, onToggleMilestone, onDeleteMilestone, onEditBed, onDeleteBed }) {
   const sel = regions.find((r) => r.id === selected);
   const byId = Object.fromEntries(regions.map((r) => [r.id, r]));
   const thirstyCount = regions.filter((r) => needsWater(r.lastTs)).length;
@@ -267,7 +267,6 @@ export default function GardenScene({ regions, hover, selected, timerId, onHover
             <span key={s} className="legend-item">{STAGES[s].icon} {STAGES[s].label}{i < STAGE_ORDER.length - 1 && <b>→</b>}</span>
           ))}
         </div>
-        <button className="analyze-btn" onClick={onAnalyze}>🔍 Analyze garden</button>
       </div>
 
       {sel && <Detail region={sel} onClose={() => onSelect(null)} onWater={onWater} onNote={onNote}

@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { STAGE_ORDER, GROWTH_PER_STAGE, STAGES, threadById, timeAgo, dayKey } from "./data.js";
 
 const FEED_ICON = { water: "💧", note: "✎", grow: "🌸", sun: "☀️", checkin: "🌱" };
 const fmtHour = (h) => `${String(h).padStart(2, "0")}:00`;
-const WEEKDAY = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const WEEKDAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const WEEKDAY_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTH = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 import * as api from "./api.js";
 import GardenScene from "./components/GardenScene.jsx";
@@ -13,13 +14,41 @@ import DaySchedule from "./components/DaySchedule.jsx";
 import DurationPicker from "./components/DurationPicker.jsx";
 import CountdownTimer from "./components/CountdownTimer.jsx";
 import BedForm from "./components/BedForm.jsx";
-import GardenAnalysis from "./components/GardenAnalysis.jsx";
+
+function getSettings() {
+  try {
+    return JSON.parse(localStorage.getItem("vsg_settings")) || {};
+  } catch { return {}; }
+}
+function saveSettings(s) { localStorage.setItem("vsg_settings", JSON.stringify(s)); }
+
+async function aiAnalyze(regions, settings) {
+  const { apiKey, model } = settings;
+  if (!apiKey || !regions.length) return null;
+  const prompt = `You are a garden life-coach AI. Analyze these garden beds and give a short 2-3 sentence overall summary plus one top priority action. Be concise and warm.\n\nBeds:\n${regions.map((r) => {
+    const days = Math.floor((Date.now() - new Date(r.lastTs).getTime()) / 864e5);
+    const ms = (r.milestones || []).filter((m) => !m.done);
+    return `- ${r.label} (${r.stage}, tended ${r.tended}x, ${r.sunshine || 0}m sun, ${days}d since water, ${ms.length} pending milestones)`;
+  }).join("\n")}`;
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({ model: model || "google/gemini-2.0-flash-001", messages: [{ role: "user", content: prompt }], max_tokens: 200 }),
+    });
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content || null;
+  } catch { return null; }
+}
 
 export default function App() {
   const [regions, setRegions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [settings, setSettings] = useState(getSettings);
+  const [showSettings, setShowSettings] = useState(false);
+  const [aiInsight, setAiInsight] = useState(null);
+  const aiRan = useRef(false);
 
-  // fetch data from API
   const refetchRegions = useCallback(async () => {
     const data = await api.fetchRegions();
     setRegions(data);
@@ -27,10 +56,17 @@ export default function App() {
 
   useEffect(() => {
     api.fetchRegions()
-      .then((r) => setRegions(r))
+      .then((r) => { setRegions(r); return r; })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!aiRan.current && regions.length > 0 && settings.apiKey) {
+      aiRan.current = true;
+      aiAnalyze(regions, settings).then((t) => t && setAiInsight(t));
+    }
+  }, [regions, settings]);
 
   const [hover, setHover] = useState(null);
   const [selected, setSelected] = useState(null);
@@ -41,12 +77,10 @@ export default function App() {
     return () => clearInterval(id);
   }, []);
 
-  // timer: "idle" | "picking" | "countdown"
   const [timerPhase, setTimerPhase] = useState("idle");
   const [timerRegionId, setTimerRegionId] = useState(null);
   const [timerMins, setTimerMins] = useState(0);
 
-  // grow a region locally after API mutation
   const applyGrow = (regionData) => {
     setRegions((rs) => rs.map((r) => r.id === regionData.id ? regionData : r));
   };
@@ -82,92 +116,49 @@ export default function App() {
     } catch (e) { console.error(e); }
   };
 
-  // new timer flow
-  const openPicker = (id) => {
-    setTimerRegionId(id);
-    setTimerPhase("picking");
-  };
-  const startCountdown = (mins) => {
-    setTimerMins(mins);
-    setTimerPhase("countdown");
-  };
-  const cancelTimer = () => {
-    setTimerPhase("idle");
-    setTimerRegionId(null);
-    setTimerMins(0);
-  };
+  const openPicker = (id) => { setTimerRegionId(id); setTimerPhase("picking"); };
+  const startCountdown = (mins) => { setTimerMins(mins); setTimerPhase("countdown"); };
+  const cancelTimer = () => { setTimerPhase("idle"); setTimerRegionId(null); setTimerMins(0); };
   const completeCountdown = (mins, note) => {
     if (timerRegionId) {
       const text = note ? `${mins}m of sunshine — ${note}` : `${mins}m of sunshine`;
       grow(timerRegionId, { type: "sun", text, mins }, (r) => ({ sunshine: (r.sunshine || 0) + mins }));
     }
-    setTimerPhase("idle");
-    setTimerRegionId(null);
-    setTimerMins(0);
+    setTimerPhase("idle"); setTimerRegionId(null); setTimerMins(0);
   };
 
   const timerRegion = timerRegionId && regions.find((r) => r.id === timerRegionId);
 
-  // milestones
   const addMilestone = async (regionId, milestone) => {
-    try {
-      const saved = await api.addMilestone(regionId, milestone);
-      applyGrow(saved);
-    } catch (e) { console.error(e); }
+    try { const saved = await api.addMilestone(regionId, milestone); applyGrow(saved); } catch (e) { console.error(e); }
   };
   const updateMilestone = async (regionId, milestone) => {
-    try {
-      const saved = await api.updateMilestone(regionId, milestone.id, milestone);
-      applyGrow(saved);
-    } catch (e) { console.error(e); }
+    try { const saved = await api.updateMilestone(regionId, milestone.id, milestone); applyGrow(saved); } catch (e) { console.error(e); }
   };
   const toggleMilestone = async (regionId, milestoneId) => {
     const region = regions.find((r) => r.id === regionId);
     const ms = region?.milestones?.find((m) => m.id === milestoneId);
     if (!ms) return;
     try {
-      const saved = await api.updateMilestone(regionId, milestoneId, {
-        done: !ms.done,
-        doneTs: !ms.done ? new Date().toISOString() : null,
-      });
+      const saved = await api.updateMilestone(regionId, milestoneId, { done: !ms.done, doneTs: !ms.done ? new Date().toISOString() : null });
       applyGrow(saved);
     } catch (e) { console.error(e); }
   };
   const deleteMilestone = async (regionId, milestoneId) => {
-    try {
-      const saved = await api.deleteMilestone(regionId, milestoneId);
-      applyGrow(saved);
-    } catch (e) { console.error(e); }
+    try { const saved = await api.deleteMilestone(regionId, milestoneId); applyGrow(saved); } catch (e) { console.error(e); }
   };
 
-  // bed form: null | "new" | region object
   const [bedForm, setBedForm] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
-  const [showAnalysis, setShowAnalysis] = useState(false);
 
   const createBed = async (bed) => {
-    try {
-      const saved = await api.createRegion(bed);
-      setRegions((rs) => [...rs, saved]);
-      setBedForm(null);
-    } catch (e) { console.error(e); }
+    try { const saved = await api.createRegion(bed); setRegions((rs) => [...rs, saved]); setBedForm(null); } catch (e) { console.error(e); }
   };
-
   const updateBed = async (bed) => {
-    try {
-      const saved = await api.updateRegion(bed.id, bed);
-      applyGrow(saved);
-      setBedForm(null);
-    } catch (e) { console.error(e); }
+    try { const saved = await api.updateRegion(bed.id, bed); applyGrow(saved); setBedForm(null); } catch (e) { console.error(e); }
   };
-
   const deleteBed = async (id) => {
-    try {
-      await api.deleteRegion(id);
-      setRegions((rs) => rs.filter((r) => r.id !== id));
-      setSelected(null);
-      setConfirmDelete(null);
-    } catch (e) { console.error(e); }
+    try { await api.deleteRegion(id); setRegions((rs) => rs.filter((r) => r.id !== id)); setSelected(null); setConfirmDelete(null); } catch (e) { console.error(e); }
   };
 
   if (loading) {
@@ -180,28 +171,24 @@ export default function App() {
     { id: "calendar", icon: "📅", label: "Timeline" },
     { id: "library", icon: "📖", label: "Library" },
   ];
-  const thirsty = regions.filter((r) => {
-    const days = (Date.now() - new Date(r.lastTs).getTime()) / 864e5;
-    return days >= 4;
-  }).length;
+  const thirsty = regions.filter((r) => (Date.now() - new Date(r.lastTs).getTime()) / 864e5 >= 4).length;
   const recent = regions
     .flatMap((r) => (r.logs || []).map((l) => ({ ...l, region: r.label, color: threadById[r.thread]?.color })))
     .sort((a, b) => new Date(b.ts) - new Date(a.ts))
     .slice(0, 8);
 
-  // next 3 hours from today's plan (read live from localStorage)
   const byId = Object.fromEntries(regions.map((r) => [r.id, r]));
   const H = clock.getHours();
   let sched = {};
   try { sched = JSON.parse(localStorage.getItem(`vsg_schedule_${dayKey(clock)}`)) || {}; } catch (e) { /* ignore */ }
-  const next3 = [];
-  for (let o = 0; o < 3 && H + o < 24; o++) next3.push({ h: H + o, slot: sched[H + o] });
-  const hh = String(H).padStart(2, "0");
-  const mm = String(clock.getMinutes()).padStart(2, "0");
+  const nextSlots = [];
+  for (let o = 0; o < 4 && H + o < 24; o++) {
+    const slot = sched[H + o];
+    if (slot) nextSlots.push({ h: H + o, slot });
+  }
 
   return (
     <div className="dash">
-      {/* left: minimal nav rail */}
       <aside className="dash-left">
         <div className="dash-brand" title="VisualSpam">🌱</div>
         <nav className="dash-nav">
@@ -210,36 +197,38 @@ export default function App() {
               {n.icon}
             </button>
           ))}
+          <button className={showSettings ? "on" : ""} onClick={() => setShowSettings(true)} title="Settings">⚙</button>
         </nav>
       </aside>
 
-      {/* centre: the active view */}
       <main className="dash-main">
         {view === "garden" && (
-          <div className="now-widget now-float">
-            <div className="now-time">
-              <span className="now-clock">{hh}:{mm}</span>
-              <span className="now-date">{WEEKDAY[clock.getDay()]}, {MONTH[clock.getMonth()]} {clock.getDate()}</span>
+          <div className="garden-clock-bar">
+            <div className="garden-clock">
+              <span className="garden-clock-time">{fmtHour(H)}:{String(clock.getMinutes()).padStart(2, "0")}</span>
+              <span className="garden-clock-date">{WEEKDAY_FULL[clock.getDay()]}, {MONTH[clock.getMonth()]} {clock.getDate()}</span>
             </div>
-            <ul className="now-next">
-              {next3.map(({ h, slot }) => {
-                const bed = slot?.bedId ? byId[slot.bedId] : null;
-                const t = bed ? threadById[bed.thread] : null;
-                const ms = bed?.milestones?.find((m) => m.id === slot?.milestoneId);
-                const what = bed ? (ms ? ms.name : slot.text || "") : (slot?.text || "");
-                return (
-                  <li key={h} className={h === H ? "on" : ""} onClick={() => setView("day")}>
-                    <span className="now-h">{fmtHour(h)}</span>
-                    {t && <span className="now-dot" style={{ background: t.color }} />}
-                    <span className="now-what">
-                      {bed ? <><b>{bed.label}</b>{what ? ` · ${what}` : ""}</> : (what || <i>open</i>)}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-            <button className="now-plan-btn" onClick={() => setView("day")}>open day plan →</button>
+            {nextSlots.length > 0 && (
+              <div className="garden-schedule">
+                {nextSlots.map(({ h, slot }) => {
+                  const bed = slot?.bedId ? byId[slot.bedId] : null;
+                  const t = bed ? threadById[bed.thread] : null;
+                  return (
+                    <div key={h} className={`garden-sched-item ${h === H ? "now" : ""}`} onClick={() => setView("day")}>
+                      <span className="garden-sched-time">{fmtHour(h)}</span>
+                      {t && <span className="garden-sched-dot" style={{ background: t.color }} />}
+                      <span className="garden-sched-text">
+                        {bed ? <><b>{bed.label}</b>{slot.text ? ` · ${slot.text}` : ""}</> : (slot?.text || "open")}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
+        )}
+        {view === "garden" && aiInsight && (
+          <div className="ai-insight-bar">{aiInsight}</div>
         )}
         {view === "garden" ? (
           <GardenScene
@@ -259,7 +248,6 @@ export default function App() {
             onDeleteMilestone={deleteMilestone}
             onEditBed={(bed) => setBedForm(bed)}
             onDeleteBed={(id) => setConfirmDelete(id)}
-            onAnalyze={() => setShowAnalysis(true)}
           />
         ) : view === "day" ? (
           <DaySchedule regions={regions} />
@@ -270,7 +258,6 @@ export default function App() {
         )}
       </main>
 
-      {/* right: beds overview + recent */}
       <aside className="dash-right">
         <div className="rail-head">
           <span>Your beds</span>
@@ -317,12 +304,8 @@ export default function App() {
       {timerPhase === "countdown" && timerRegion && (
         <CountdownTimer regionLabel={timerRegion.label} durationMins={timerMins} onComplete={completeCountdown} onCancel={cancelTimer} />
       )}
-      {bedForm === "new" && (
-        <BedForm onSave={createBed} onCancel={() => setBedForm(null)} />
-      )}
-      {bedForm && bedForm !== "new" && (
-        <BedForm bed={bedForm} onSave={updateBed} onCancel={() => setBedForm(null)} />
-      )}
+      {bedForm === "new" && <BedForm onSave={createBed} onCancel={() => setBedForm(null)} />}
+      {bedForm && bedForm !== "new" && <BedForm bed={bedForm} onSave={updateBed} onCancel={() => setBedForm(null)} />}
       {confirmDelete && (
         <div className="modal-backdrop" onClick={() => setConfirmDelete(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -336,7 +319,53 @@ export default function App() {
           </div>
         </div>
       )}
-      {showAnalysis && <GardenAnalysis onClose={() => setShowAnalysis(false)} />}
+      {showSettings && (
+        <div className="modal-backdrop" onClick={() => setShowSettings(false)}>
+          <div className="modal settings-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setShowSettings(false)}>✕</button>
+            <h2 className="ms-title">Settings</h2>
+            <p className="ms-region">Configure AI analysis powered by OpenRouter</p>
+            <div className="ms-field">
+              <label className="ms-label">OpenRouter API Key</label>
+              <input
+                type="password"
+                className="ms-input"
+                placeholder="sk-or-..."
+                value={settings.apiKey || ""}
+                onChange={(e) => {
+                  const s = { ...settings, apiKey: e.target.value };
+                  setSettings(s); saveSettings(s);
+                }}
+              />
+            </div>
+            <div className="ms-field">
+              <label className="ms-label">Model</label>
+              <input
+                type="text"
+                className="ms-input"
+                placeholder="google/gemini-2.0-flash-001"
+                value={settings.model || ""}
+                onChange={(e) => {
+                  const s = { ...settings, model: e.target.value };
+                  setSettings(s); saveSettings(s);
+                }}
+              />
+              <p style={{ fontSize: "0.72rem", color: "#857c69", marginTop: 6 }}>
+                Leave blank for default (Gemini 2.0 Flash). Get an API key at{" "}
+                <a href="https://openrouter.ai/keys" target="_blank" rel="noopener" style={{ color: "#4c9a63" }}>openrouter.ai/keys</a>
+              </p>
+            </div>
+            <button className="ms-save" onClick={() => {
+              setShowSettings(false);
+              aiRan.current = false;
+              setAiInsight(null);
+              if (settings.apiKey && regions.length) {
+                aiAnalyze(regions, settings).then((t) => t && setAiInsight(t));
+              }
+            }}>Save & Analyze</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

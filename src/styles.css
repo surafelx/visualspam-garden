@@ -27,8 +27,8 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 /* ── grass field ── */
 .field {
   position: relative; width: 100%; height: 100vh; overflow: hidden;
-  display: grid; grid-template-rows: 1fr auto; place-items: center;
-  padding: 24px;
+  display: grid; grid-template-rows: auto 1fr auto; place-items: center;
+  padding: 80px 24px 24px;
   background:
     repeating-linear-gradient(0deg, rgba(0,0,0,0.03) 0 14px, transparent 14px 28px),
     repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0 14px, transparent 14px 28px),
@@ -515,7 +515,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 /* ═══════════════════════════════════════════════════════════════════════ */
 .modal-backdrop { background: rgba(40, 44, 34, 0.32); backdrop-filter: blur(2px); }
 
-.detail-modal, .milestone-form {
+.detail-modal, .milestone-form, .bed-form, .settings-modal {
   background: #f7f5ee !important;
   border: 1px solid #e3ddcd !important;
   border-top: 4px solid var(--rc, #8fe39a) !important;
@@ -524,6 +524,8 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 }
 .detail-close { color: #a39a86 !important; }
 .detail-close:hover { color: #2c2920 !important; }
+.bed-form .modal-close, .settings-modal .modal-close { color: #a39a86 !important; }
+.bed-form .modal-close:hover, .settings-modal .modal-close:hover { color: #2c2920 !important; }
 .detail-icon { background: color-mix(in srgb, var(--rc) 16%, #fff) !important; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rc) 40%, transparent) !important; }
 .detail-name { color: #2c2920 !important; }
 .detail-name span { color: #9a927f !important; }
@@ -773,3 +775,55 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
   color: #4c9a63; background: #e6f2e4; transition: background 0.12s, transform 0.1s;
 }
 .analyze-btn:hover { background: #dcecd9; transform: translateY(-1px); }
+
+/* ── duration picker presets ── */
+.dp-presets { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-bottom: 12px; }
+.dp-preset {
+  padding: 7px 14px; border-radius: 8px; font-family: inherit; font-size: 0.82rem;
+  color: #4a463c; background: #fff; border: 1px solid #e0dccb;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.dp-preset:hover { border-color: #f2b544; background: #fff9ed; }
+.dp-preset.on { background: #f2b544; color: #3a2600; border-color: #f2b544; }
+.dp-divider { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; color: #b3ab98; font-size: 0.72rem; }
+.dp-divider::before, .dp-divider::after { content: ""; flex: 1; height: 1px; background: #e0dccb; }
+
+/* ── garden clock bar (top of garden view) ── */
+.garden-clock-bar {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 20;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+  padding: 20px 24px 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.6) 70%, transparent 100%);
+  pointer-events: none;
+}
+.garden-clock-bar > * { pointer-events: auto; }
+.garden-clock { text-align: right; }
+.garden-clock-time { display: block; font-size: 3.8rem; line-height: 1; color: #2b2820; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.garden-clock-date { display: block; font-size: 0.82rem; color: #8a8471; margin-top: 2px; letter-spacing: 0.02em; }
+.garden-schedule { display: flex; flex-direction: column; gap: 2px; max-width: 280px; }
+.garden-sched-item {
+  display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 8px;
+  font-size: 0.78rem; color: #4a463c; cursor: pointer; transition: background 0.12s;
+}
+.garden-sched-item:hover { background: rgba(255,255,255,0.7); }
+.garden-sched-item.now { background: rgba(255,255,255,0.8); box-shadow: inset 0 0 0 1px rgba(224,137,74,0.3); }
+.garden-sched-item.now .garden-sched-time { color: #e0894a; font-weight: 700; }
+.garden-sched-time { flex: 0 0 auto; width: 38px; color: #a39a86; font-variant-numeric: tabular-nums; }
+.garden-sched-dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; }
+.garden-sched-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.garden-sched-text b { color: #2c2920; }
+
+/* ── AI insight bar ── */
+.ai-insight-bar {
+  position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); z-index: 15;
+  max-width: 600px; padding: 10px 18px; border-radius: 10px;
+  font-size: 0.78rem; line-height: 1.5; color: #4a463c;
+  background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(6px);
+  border: 1px solid rgba(143, 227, 154, 0.4);
+  box-shadow: 0 6px 20px -8px rgba(0,0,0,0.2);
+  text-align: center;
+  animation: fadeIn 0.4s ease;
+}
+
+/* ── settings modal ── */
+.settings-modal { max-width: 400px; }
