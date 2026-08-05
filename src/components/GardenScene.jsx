@@ -8,6 +8,7 @@ function BedCard({ region, onSelect, onStartTimer, onWater }) {
   const plants = region.plants || [];
   const pendingFruits = plants.reduce((n, p) => n + (p.fruits || []).filter((f) => !f.done).length, 0);
   const doneFruits = plants.reduce((n, p) => n + (p.fruits || []).filter((f) => f.done).length, 0);
+  const watered = (region.logs || []).filter((l) => l.type === "water").length;
   const spriteSize = 38;
   const count = plants.length > 0 ? Math.min(plants.length, 5) : 1;
 
@@ -26,6 +27,7 @@ function BedCard({ region, onSelect, onStartTimer, onWater }) {
       </div>
       <div className="g-card-stats">
         <span className="g-stat"><span className="g-stat-icon">☀️</span><span className="g-stat-val">{region.sunshine || 0}</span><span className="g-stat-unit">m</span></span>
+        <span className="g-stat"><span className="g-stat-icon">💧</span><span className="g-stat-val">{watered}</span><span className="g-stat-unit">×</span></span>
         <span className="g-stat"><span className="g-stat-icon">🌿</span><span className="g-stat-val">{region.tended}</span><span className="g-stat-unit">×</span></span>
         {plants.length > 0 && <span className="g-stat"><span className="g-stat-icon">🌱</span><span className="g-stat-val">{plants.length}</span></span>}
         {pendingFruits > 0 && <span className="g-stat g-stat-fruit"><span className="g-stat-icon">🍊</span><span className="g-stat-val">{pendingFruits}</span></span>}
@@ -43,10 +45,11 @@ function BedCard({ region, onSelect, onStartTimer, onWater }) {
   );
 }
 
-export default function GardenScene({ regions, hover, selected, timerId, onHover, onSelect, onWater, onStartTimer }) {
+export default function GardenScene({ regions, hover, selected, timerId, onHover, onSelect, onWater, onStartTimer, aiInsight, onRefreshAI }) {
   const thirstyCount = regions.filter((r) => needsWater(r.lastTs)).length;
   const totalSun = regions.reduce((n, r) => n + (r.sunshine || 0), 0);
   const totalTended = regions.reduce((n, r) => n + r.tended, 0);
+  const totalWatered = regions.reduce((n, r) => n + (r.logs || []).filter((l) => l.type === "water").length, 0);
   const totalPlants = regions.reduce((n, r) => n + (r.plants || []).length, 0);
   const totalFruits = regions.reduce((n, r) => {
     return n + (r.plants || []).reduce((s, p) => s + (p.fruits || []).filter((f) => !f.done).length, 0);
@@ -86,11 +89,20 @@ export default function GardenScene({ regions, hover, selected, timerId, onHover
         <div className="g-sum-item"><span className="g-sum-num">{totalPlants}</span><span className="g-sum-label">plants</span></div>
         <div className="g-sum-item"><span className="g-sum-num">{totalFruits}</span><span className="g-sum-label">fruits pending</span></div>
         <div className="g-sum-item"><span className="g-sum-num">{totalSun}m</span><span className="g-sum-label">sunshine</span></div>
+        <div className="g-sum-item"><span className="g-sum-num">{totalWatered}</span><span className="g-sum-label">watered</span></div>
         <div className="g-sum-item"><span className="g-sum-num">{totalTended}</span><span className="g-sum-label">tended</span></div>
         {thirstyCount > 0 && (
           <div className="g-sum-item g-sum-thirst"><span className="g-sum-num">💧 {thirstyCount}</span><span className="g-sum-label">need water</span></div>
         )}
       </div>
+
+      {aiInsight && (
+        <div className="g-ai-row">
+          <span className="g-ai-icon">✦</span>
+          <span className="g-ai-text">{aiInsight}</span>
+          <button className="g-ai-refresh" onClick={onRefreshAI} title="Refresh insight">↻</button>
+        </div>
+      )}
 
       <div className="g-grid">
         {regions.map((r) => (

@@ -11,6 +11,7 @@ import DurationPicker from "./components/DurationPicker.jsx";
 import CountdownTimer from "./components/CountdownTimer.jsx";
 import BedForm from "./components/BedForm.jsx";
 import BedDetailPage from "./components/BedDetailPage.jsx";
+import RoadmapView from "./components/RoadmapView.jsx";
 import LoginGate from "./components/LoginGate.jsx";
 import PublicPage from "./components/PublicPage.jsx";
 
@@ -224,6 +225,7 @@ export default function App() {
     { id: "garden", icon: "🌱", label: "Garden" },
     { id: "day", icon: "🕐", label: "Day plan" },
     { id: "calendar", icon: "📅", label: "Timeline" },
+    { id: "roadmap", icon: "🗺", label: "Roadmap" },
     { id: "library", icon: "📖", label: "Library" },
   ];
   const thirsty = regions.filter((r) => (Date.now() - new Date(r.lastTs).getTime()) / 864e5 >= 4).length;
@@ -259,6 +261,8 @@ export default function App() {
             onStartTimer={openPicker}
             onEditBed={(bed) => setBedForm(bed)}
             onDeleteBed={(id) => setConfirmDelete(id)}
+            aiInsight={aiInsight}
+            onRefreshAI={() => { aiRan.current = false; aiAnalyze(regions, settings).then((t) => t && setAiInsight(t)); }}
           />
         ) : view === "bed" && selected ? (
           <BedDetailPage
@@ -275,6 +279,8 @@ export default function App() {
           <DaySchedule regions={regions} />
         ) : view === "calendar" ? (
           <CalendarView regions={regions} view={view} />
+        ) : view === "roadmap" ? (
+          <RoadmapView regions={regions} onSelectBed={viewBedDetail} />
         ) : (
           <Library />
         )}
