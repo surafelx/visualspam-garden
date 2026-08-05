@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { STAGES, threadById, timeAgo, dayKey } from "./data.js";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { threadById, timeAgo, dayKey } from "./data.js";
 
 const FEED_ICON = { water: "💧", note: "✎", grow: "🌸", sun: "☀️", checkin: "🌱" };
 import * as api from "./api.js";
@@ -54,11 +54,6 @@ export default function App() {
     if (!admin) { localStorage.setItem("vsg_admin", "1"); setAdmin(true); }
   };
 
-  const refetchRegions = useCallback(async () => {
-    const data = await api.fetchRegions();
-    setRegions(data);
-  }, []);
-
   useEffect(() => {
     api.fetchRegions()
       .then((r) => { setRegions(r); return r; })
@@ -101,16 +96,18 @@ export default function App() {
   };
 
   const grow = async (id, log, extra = {}) => {
-    const region = regions.find((r) => r.id === id);
-    if (!region) return;
-    const nowIso = new Date().toISOString();
-    const logs = [{ ts: nowIso, ...log }, ...region.logs];
-    const extraData = typeof extra === "function" ? extra(region) : extra;
-    const updated = { ...region, logs, tended: region.tended + 1, lastTs: nowIso, ...extraData };
-    try {
-      const saved = await api.updateRegion(id, updated);
-      applyGrow(saved);
-    } catch (e) { console.error(e); }
+    setRegions((rs) => {
+      const region = rs.find((r) => r.id === id);
+      if (!region) return rs;
+      const nowIso = new Date().toISOString();
+      const logs = [{ ts: nowIso, ...log }, ...region.logs];
+      const extraData = typeof extra === "function" ? extra(region) : extra;
+      const updated = { ...region, logs, tended: region.tended + 1, lastTs: nowIso, ...extraData };
+      api.updateRegion(id, updated).then((saved) => {
+        setRegions((prev) => prev.map((r) => r.id === saved.id ? saved : r));
+      }).catch(console.error);
+      return rs.map((r) => r.id === id ? updated : r);
+    });
   };
 
   // ── Water flow ──
@@ -267,7 +264,7 @@ export default function App() {
           <BedDetailPage
             region={regions.find((r) => r.id === selected)}
             onBack={() => setView("garden")}
-            onRefresh={refetchRegions}
+            onUpdate={(updated) => setRegions((rs) => rs.map((r) => r.id === updated.id ? updated : r))}
             onWater={openWater}
             onStartTimer={openPicker}
             timerRunning={timerPhase === "countdown" && timerRegionId === selected}

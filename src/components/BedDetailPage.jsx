@@ -166,7 +166,7 @@ function WaterModal({ region, onClose, onWater }) {
   );
 }
 
-export default function BedDetailPage({ region, onBack, onRefresh, onWater, onStartTimer, timerRunning, onEditBed, onDeleteBed }) {
+export default function BedDetailPage({ region, onBack, onRefresh, onUpdate, onWater, onStartTimer, timerRunning, onEditBed, onDeleteBed }) {
   const [plantForm, setPlantForm] = useState(null);
   const [showWater, setShowWater] = useState(false);
   const regionRef = useRef(region);
@@ -181,27 +181,27 @@ export default function BedDetailPage({ region, onBack, onRefresh, onWater, onSt
   const waterLogs = logs.filter((l) => l.type === "water");
 
   const handleAddPlant = async (plant) => {
-    try { await api.addPlant(regionRef.current.id, plant); onRefresh?.(); } catch (e) { console.error(e); }
+    try { const saved = await api.addPlant(regionRef.current.id, plant); onUpdate?.(saved); } catch (e) { console.error(e); }
     setPlantForm(null);
   };
   const handleEditPlant = async (plant) => {
-    try { await api.updatePlant(regionRef.current.id, plant.id, plant); onRefresh?.(); } catch (e) { console.error(e); }
+    try { const saved = await api.updatePlant(regionRef.current.id, plant.id, plant); onUpdate?.(saved); } catch (e) { console.error(e); }
     setPlantForm(null);
   };
   const handleDeletePlant = async (regionId, plantId) => {
-    try { await api.deletePlant(regionId, plantId); onRefresh?.(); } catch (e) { console.error(e); }
+    try { const saved = await api.deletePlant(regionId, plantId); onUpdate?.(saved); } catch (e) { console.error(e); }
   };
   const handleAddFruit = async (regionId, plantId, fruit) => {
-    try { await api.addFruit(regionId, plantId, fruit); onRefresh?.(); } catch (e) { console.error(e); }
+    try { const saved = await api.addFruit(regionId, plantId, fruit); onUpdate?.(saved); } catch (e) { console.error(e); }
   };
   const handleUpdateFruit = async (regionId, plantId, fruit) => {
-    try { await api.updateFruit(regionId, plantId, fruit.id, fruit); onRefresh?.(); } catch (e) { console.error(e); }
+    try { const saved = await api.updateFruit(regionId, plantId, fruit.id, fruit); onUpdate?.(saved); } catch (e) { console.error(e); }
   };
   const handleToggleFruit = async (regionId, plantId, fruitId) => {
-    try { await api.updateFruit(regionId, plantId, fruitId, { done: true, doneTs: new Date().toISOString() }); onRefresh?.(); } catch (e) { console.error(e); }
+    try { const saved = await api.updateFruit(regionId, plantId, fruitId, { done: true, doneTs: new Date().toISOString() }); onUpdate?.(saved); } catch (e) { console.error(e); }
   };
   const handleDeleteFruit = async (regionId, plantId, fruitId) => {
-    try { await api.deleteFruit(regionId, plantId, fruitId); onRefresh?.(); } catch (e) { console.error(e); }
+    try { const saved = await api.deleteFruit(regionId, plantId, fruitId); onUpdate?.(saved); } catch (e) { console.error(e); }
   };
 
   const genIcs = () => {
