@@ -29,9 +29,9 @@ function BedCard({ region, onSelect, onStartTimer, onWater }) {
         <span className="g-stat"><span className="g-stat-icon">☀️</span><span className="g-stat-val">{region.sunshine || 0}</span><span className="g-stat-unit">m</span></span>
         <span className="g-stat"><span className="g-stat-icon">💧</span><span className="g-stat-val">{watered}</span><span className="g-stat-unit">×</span></span>
         <span className="g-stat"><span className="g-stat-icon">🌿</span><span className="g-stat-val">{region.tended}</span><span className="g-stat-unit">×</span></span>
-        {plants.length > 0 && <span className="g-stat"><span className="g-stat-icon">🌱</span><span className="g-stat-val">{plants.length}</span></span>}
-        {pendingFruits > 0 && <span className="g-stat g-stat-fruit"><span className="g-stat-icon">🍊</span><span className="g-stat-val">{pendingFruits}</span></span>}
-        {doneFruits > 0 && <span className="g-stat g-stat-done"><span className="g-stat-icon">✓</span><span className="g-stat-val">{doneFruits}</span></span>}
+        <span className="g-stat"><span className="g-stat-icon">🌱</span><span className="g-stat-val">{plants.length}</span></span>
+        <span className="g-stat g-stat-fruit"><span className="g-stat-icon">🍊</span><span className="g-stat-val">{pendingFruits}</span></span>
+        <span className="g-stat g-stat-done"><span className="g-stat-icon">✓</span><span className="g-stat-val">{doneFruits}</span></span>
       </div>
       <div className="g-card-actions">
         <button className="g-card-action g-card-water" title="Water" onClick={(e) => { e.stopPropagation(); onWater(region.id); }}>
