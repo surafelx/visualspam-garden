@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { threadById, timeAgo, dayKey } from "./data.js";
+import { encryptText, decryptText } from "./crypto.js";
 
 const FEED_ICON = { water: "💧", note: "✎", grow: "🌸", sun: "☀️", checkin: "🌱" };
 import * as api from "./api.js";
@@ -14,40 +15,56 @@ import BedDetailPage from "./components/BedDetailPage.jsx";
 import RoadmapView from "./components/RoadmapView.jsx";
 import LoginGate from "./components/LoginGate.jsx";
 import PublicPage from "./components/PublicPage.jsx";
+import GardenAnalysis from "./components/GardenAnalysis.jsx";
 
-function getSettings() {
-  try { return JSON.parse(localStorage.getItem("vsg_settings")) || {}; }
-  catch { return {}; }
-}
-function saveSettings(s) { localStorage.setItem("vsg_settings", JSON.stringify(s)); }
-
-async function aiAnalyze(regions, settings) {
-  const { apiKey, model } = settings;
-  if (!apiKey || !regions.length) return null;
-  const prompt = `You are a garden life-coach AI. Analyze these garden beds and give a short 2-3 sentence overall summary plus one top priority action. Be concise and warm.\n\nBeds:\n${regions.map((r) => {
-    const days = Math.floor((Date.now() - new Date(r.lastTs).getTime()) / 864e5);
-    const plants = (r.plants || []).length;
-    return `- ${r.label} (tended ${r.tended}x, ${r.sunshine || 0}m sun, ${days}d since water, ${plants} plants)`;
-  }).join("\n")}`;
+async function getSettings() {
   try {
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({ model: model || "google/gemini-2.0-flash-001", messages: [{ role: "user", content: prompt }], max_tokens: 200 }),
-    });
-    const data = await res.json();
-    return data.choices?.[0]?.message?.content || null;
-  } catch { return null; }
+    const raw = JSON.parse(localStorage.getItem("vsg_settings")) || {};
+    const apiKey = raw.encApiKey ? await decryptText(raw.encApiKey) : (raw.apiKey || "");
+    const model = raw.encModel ? await decryptText(raw.encModel) : (raw.model || "");
+    return { apiKey, model };
+  } catch { return { apiKey: "", model: "" }; }
 }
+async function saveSettings(s) {
+  const encApiKey = s.apiKey ? await encryptText(s.apiKey) : "";
+  const encModel = s.model ? await encryptText(s.model) : "";
+  localStorage.setItem("vsg_settings", JSON.stringify({ encApiKey, encModel }));
+}
+
+  const aiAnalyze = async (regions, settings) => {
+    const { apiKey, model } = settings;
+    const prompt = `You are a garden life-coach AI. Analyze these garden beds and give a short 2-3 sentence overall summary plus one top priority action. Be concise and warm.\n\nBeds:\n${regions.map((r) => {
+      const days = Math.floor((Date.now() - new Date(r.lastTs).getTime()) / 864e5);
+      const plants = (r.plants || []).length;
+      return `- ${r.label} (tended ${r.tended}x, ${r.sunshine || 0}m sun, ${days}d since water, ${plants} plants)`;
+    }).join("\n")}`;
+    if (!apiKey) return null;
+    try {
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({ model: model || "google/gemini-2.0-flash-001", messages: [{ role: "user", content: prompt }], max_tokens: 200 }),
+      });
+      const data = await res.json();
+      return data.choices?.[0]?.message?.content || null;
+    } catch { return null; }
+  };
 
 export default function App() {
   const [admin, setAdmin] = useState(() => localStorage.getItem("vsg_admin") === "1");
   const [regions, setRegions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [settings, setSettings] = useState(getSettings);
+  const [settings, setSettings] = useState({ apiKey: "", model: "" });
+  useEffect(() => { getSettings().then(setSettings); }, []);
   const [showSettings, setShowSettings] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem("vsg_dark") === "1");
   const [aiInsight, setAiInsight] = useState(null);
   const aiRan = useRef(false);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
+    localStorage.setItem("vsg_dark", darkMode ? "1" : "0");
+  }, [darkMode]);
 
   const handleLogin = () => setAdmin(true);
   const handleLogout = () => { localStorage.removeItem("vsg_admin"); setAdmin(false); };
@@ -85,12 +102,20 @@ export default function App() {
   const [waterFruitId, setWaterFruitId] = useState(null);
   const [waterText, setWaterText] = useState("");
 
-  // Sunshine: phase can be "picking-plant", "picking-fruit", "picking", or "countdown"
-  const [timerPhase, setTimerPhase] = useState("idle");
-  const [timerRegionId, setTimerRegionId] = useState(null);
-  const [timerPlantId, setTimerPlantId] = useState(null);
-  const [timerFruitId, setTimerFruitId] = useState(null);
-  const [timerMins, setTimerMins] = useState(0);
+  // Sunshine: multiple concurrent timers
+  const [timers, setTimers] = useState([]);
+  const [editingTimerId, setEditingTimerId] = useState(null);
+  let timerIdCounter = useRef(0);
+
+  const getTimer = (id) => timers.find((t) => t.id === id);
+  const getTimerRegion = (id) => { const t = getTimer(id); return t ? regions.find((r) => r.id === t.regionId) : null; };
+  const getTimerPlant = (id) => {
+    const t = getTimer(id);
+    const region = t ? regions.find((r) => r.id === t.regionId) : null;
+    return region && t?.plantId ? region.plants.find((p) => p.id === t.plantId) : null;
+  };
+  const updateTimer = (id, patch) => setTimers((ts) => ts.map((t) => t.id === id ? { ...t, ...patch } : t));
+  const removeTimer = (id) => setTimers((ts) => ts.filter((t) => t.id !== id));
 
   const applyGrow = (regionData) => {
     setRegions((rs) => rs.map((r) => r.id === regionData.id ? regionData : r));
@@ -146,41 +171,41 @@ export default function App() {
 
   // ── Sunshine flow ──
   const openPicker = (id) => {
-    setTimerRegionId(id);
+    const newId = ++timerIdCounter.current;
     const region = regions.find((r) => r.id === id);
-    if (region?.plants?.length > 0) setTimerPhase("picking-plant");
-    else setTimerPhase("picking");
+    const phase = region?.plants?.length > 0 ? "picking-plant" : "picking";
+    setTimers((ts) => [...ts, { id: newId, regionId: id, plantId: null, fruitId: null, phase, mins: 0 }]);
+    setEditingTimerId(newId);
   };
-  const pickPlant = (plantId) => {
-    setTimerPlantId(plantId);
-    const region = regions.find((r) => r.id === timerRegionId);
+  const timerPickPlant = (timerId, plantId) => {
+    const region = regions.find((r) => r.id === getTimer(timerId)?.regionId);
     const plant = region?.plants?.find((p) => p.id === plantId);
-    if (plant?.fruits?.filter((f) => !f.done).length > 0) setTimerPhase("picking-fruit");
-    else setTimerPhase("picking");
+    const phase = plant?.fruits?.filter((f) => !f.done).length > 0 ? "picking-fruit" : "picking";
+    updateTimer(timerId, { plantId, phase });
   };
-  const pickFruit = (fruitId) => { setTimerFruitId(fruitId); setTimerPhase("picking"); };
-  const skipFruit = () => { setTimerFruitId(null); setTimerPhase("picking"); };
-  const startCountdown = (mins) => { setTimerMins(mins); setTimerPhase("countdown"); };
-  const cancelTimer = () => { setTimerPhase("idle"); setTimerRegionId(null); setTimerPlantId(null); setTimerFruitId(null); setTimerMins(0); };
-  const completeCountdown = (mins, note) => {
-    if (timerRegionId) {
-      const region = regions.find((r) => r.id === timerRegionId);
-      const plant = timerPlantId ? region?.plants?.find((p) => p.id === timerPlantId) : null;
-      const fruit = timerFruitId && plant ? (plant.fruits || []).find((f) => f.id === timerFruitId) : null;
+  const timerPickFruit = (timerId, fruitId) => updateTimer(timerId, { fruitId, phase: "picking" });
+  const timerSkipFruit = (timerId) => updateTimer(timerId, { fruitId: null, phase: "picking" });
+  const startCountdown = (timerId, mins) => updateTimer(timerId, { mins, phase: "countdown" });
+  const cancelTimer = (timerId) => { removeTimer(timerId); if (editingTimerId === timerId) setEditingTimerId(null); };
+  const completeCountdown = (timerId, mins, note) => {
+    const t = getTimer(timerId);
+    if (t) {
+      const region = regions.find((r) => r.id === t.regionId);
+      const plant = t.plantId ? region?.plants?.find((p) => p.id === t.plantId) : null;
+      const fruit = t.fruitId && plant ? (plant.fruits || []).find((f) => f.id === t.fruitId) : null;
       const parts = [`${mins}m of sunshine`];
       if (plant) parts[0] += ` — ${plant.name}`;
       if (fruit) parts[0] += ` — ${fruit.title}`;
       const text = note ? `${parts[0]} — ${note}` : parts[0];
-      grow(timerRegionId, { type: "sun", text, mins }, (r) => ({ sunshine: (r.sunshine || 0) + mins }));
+      grow(t.regionId, { type: "sun", text, mins }, (r) => ({ sunshine: (r.sunshine || 0) + mins }));
     }
-    setTimerPhase("idle"); setTimerRegionId(null); setTimerPlantId(null); setTimerFruitId(null); setTimerMins(0);
+    removeTimer(timerId);
+    if (editingTimerId === timerId) setEditingTimerId(null);
   };
-
-  const timerRegion = timerRegionId && regions.find((r) => r.id === timerRegionId);
-  const timerPlant = timerPlantId && timerRegion?.plants?.find((p) => p.id === timerPlantId);
 
   const [bedForm, setBedForm] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [showAnalysis, setShowAnalysis] = useState(false);
 
   const createBed = async (bed) => {
     try { const saved = await api.createRegion(bed); setRegions((rs) => [...rs, saved]); setBedForm(null); } catch (e) { console.error(e); }
@@ -244,6 +269,7 @@ export default function App() {
             </button>
           ))}
           <button className={showSettings ? "on" : ""} onClick={() => setShowSettings(true)} title="Settings">⚙</button>
+          <button onClick={() => setDarkMode((d) => !d)} title={darkMode ? "Light mode" : "Dark mode"}>{darkMode ? "☀️" : "🌙"}</button>
           <button onClick={handleLogout} title="Logout" className="nav-logout">⏻</button>
         </nav>
       </aside>
@@ -253,14 +279,15 @@ export default function App() {
           <GardenScene
             regions={regions}
             hover={hover}
-            selected={timerPhase !== "idle" ? null : selected}
-            timerId={timerPhase === "countdown" ? timerRegionId : null}
+            selected={editingTimerId ? null : selected}
+            timerIds={timers.filter((t) => t.phase === "countdown").map((t) => t.regionId)}
             onHover={setHover}
             onSelect={viewBedDetail}
             onWater={openWater}
             onStartTimer={openPicker}
             onEditBed={(bed) => setBedForm(bed)}
             onDeleteBed={(id) => setConfirmDelete(id)}
+            onAnalyze={() => setShowAnalysis(true)}
             aiInsight={aiInsight}
             onRefreshAI={() => { aiRan.current = false; aiAnalyze(regions, settings).then((t) => t && setAiInsight(t)); }}
             hasApiKey={!!settings.apiKey}
@@ -272,7 +299,7 @@ export default function App() {
             onUpdate={(updated) => setRegions((rs) => rs.map((r) => r.id === updated.id ? updated : r))}
             onWater={openWater}
             onStartTimer={openPicker}
-            timerRunning={timerPhase === "countdown" && timerRegionId === selected}
+            timerRunning={timers.some((t) => t.phase === "countdown" && t.regionId === selected)}
             onEditBed={(bed) => setBedForm(bed)}
             onDeleteBed={(id) => setConfirmDelete(id)}
           />
@@ -283,7 +310,7 @@ export default function App() {
         ) : view === "roadmap" ? (
           <RoadmapView regions={regions} onSelectBed={viewBedDetail} />
         ) : (
-          <Library />
+          <Library regions={regions} />
         )}
       </main>
 
@@ -349,58 +376,70 @@ export default function App() {
         </ul>
       </aside>
 
-      {/* ── Sunshine: pick plant ── */}
-      {timerPhase === "picking-plant" && timerRegion && (
-        <div className="modal-backdrop" onClick={cancelTimer}>
-          <div className="modal plant-picker" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={cancelTimer}>✕</button>
-            <h2 className="ms-title">☀️ Choose a plant</h2>
-            <p className="ms-region">in {timerRegion.label}</p>
-            <div className="pp-list">
-              {timerRegion.plants.map((p) => (
-                <button key={p.id} className="pp-item" onClick={() => pickPlant(p.id)}>
-                  <span className="pp-name">{p.name}</span>
-                  <span className="pp-crop">{p.crop}</span>
-                </button>
-              ))}
+      {/* ── Sunshine pickers (one per editing timer) ── */}
+      {timers.filter((t) => t.phase !== "idle" && t.phase !== "countdown" && t.id === editingTimerId).map((t) => {
+        const region = regions.find((r) => r.id === t.regionId);
+        const plant = t.plantId ? region?.plants?.find((p) => p.id === t.plantId) : null;
+        if (!region) return null;
+
+        if (t.phase === "picking-plant") return (
+          <div key={t.id} className="modal-backdrop" onClick={() => cancelTimer(t.id)}>
+            <div className="modal plant-picker" onClick={(e) => e.stopPropagation()}>
+              <button className="modal-close" onClick={() => cancelTimer(t.id)}>✕</button>
+              <h2 className="ms-title">☀️ Choose a plant</h2>
+              <p className="ms-region">in {region.label}</p>
+              <div className="pp-list">
+                {region.plants.map((p) => (
+                  <button key={p.id} className="pp-item" onClick={() => timerPickPlant(t.id, p.id)}>
+                    <span className="pp-name">{p.name}</span>
+                    <span className="pp-crop">{p.crop}</span>
+                  </button>
+                ))}
+              </div>
+              <button className="ms-save" style={{ marginTop: 12 }} onClick={() => updateTimer(t.id, { plantId: null, fruitId: null, phase: "picking" })}>
+                Skip — sunshine for whole bed
+              </button>
             </div>
-            <button className="ms-save" style={{ marginTop: 12 }} onClick={() => { setTimerPlantId(null); setTimerFruitId(null); setTimerPhase("picking"); }}>
-              Skip — sunshine for whole bed
-            </button>
           </div>
-        </div>
-      )}
+        );
 
-      {/* ── Sunshine: pick fruit ── */}
-      {timerPhase === "picking-fruit" && timerPlant && (
-        <div className="modal-backdrop" onClick={cancelTimer}>
-          <div className="modal plant-picker" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={cancelTimer}>✕</button>
-            <h2 className="ms-title">☀️ Choose a fruit</h2>
-            <p className="ms-region">{timerPlant.name}</p>
-            <div className="pp-list">
-              {(timerPlant.fruits || []).filter((f) => !f.done).map((f) => (
-                <button key={f.id} className="pp-item" onClick={() => pickFruit(f.id)}>
-                  <span className="pp-name">🍊 {f.title}</span>
-                </button>
-              ))}
+        if (t.phase === "picking-fruit" && plant) return (
+          <div key={t.id} className="modal-backdrop" onClick={() => cancelTimer(t.id)}>
+            <div className="modal plant-picker" onClick={(e) => e.stopPropagation()}>
+              <button className="modal-close" onClick={() => cancelTimer(t.id)}>✕</button>
+              <h2 className="ms-title">☀️ Choose a fruit</h2>
+              <p className="ms-region">{plant.name}</p>
+              <div className="pp-list">
+                {(plant.fruits || []).filter((f) => !f.done).map((f) => (
+                  <button key={f.id} className="pp-item" onClick={() => timerPickFruit(t.id, f.id)}>
+                    <span className="pp-name">🍊 {f.title}</span>
+                  </button>
+                ))}
+              </div>
+              <button className="ms-save" style={{ marginTop: 12 }} onClick={() => timerSkipFruit(t.id)}>
+                Skip — sunshine for whole plant
+              </button>
             </div>
-            <button className="ms-save" style={{ marginTop: 12 }} onClick={skipFruit}>
-              Skip — sunshine for whole plant
-            </button>
           </div>
-        </div>
-      )}
+        );
 
-      {/* ── Sunshine: pick duration ── */}
-      {timerPhase === "picking" && timerRegion && (
-        <DurationPicker regionLabel={timerRegion.label} onStart={startCountdown} onCancel={cancelTimer} />
-      )}
+        if (t.phase === "picking") return (
+          <DurationPicker key={t.id} regionLabel={region.label} onStart={(mins) => startCountdown(t.id, mins)} onCancel={() => cancelTimer(t.id)} />
+        );
 
-      {/* ── Sunshine: countdown ── */}
-      {timerPhase === "countdown" && timerRegion && (
-        <CountdownTimer regionLabel={timerRegion.label} durationMins={timerMins} onComplete={completeCountdown} onCancel={cancelTimer} />
-      )}
+        return null;
+      })}
+
+      {/* ── Sunshine countdowns (multiple can run at once) ── */}
+      {timers.filter((t) => t.phase === "countdown").map((t) => {
+        const region = regions.find((r) => r.id === t.regionId);
+        if (!region) return null;
+        return (
+          <CountdownTimer key={t.id} regionLabel={region.label} durationMins={t.mins}
+            onComplete={(mins, note) => completeCountdown(t.id, mins, note)}
+            onCancel={() => cancelTimer(t.id)} />
+        );
+      })}
 
       {/* ── Water: pick plant ── */}
       {waterPhase === "picking-plant" && waterRegion && (
@@ -496,9 +535,9 @@ export default function App() {
                 className="ms-input"
                 placeholder="sk-or-..."
                 value={settings.apiKey || ""}
-                onChange={(e) => {
+                onChange={async (e) => {
                   const s = { ...settings, apiKey: e.target.value };
-                  setSettings(s); saveSettings(s);
+                  setSettings(s); await saveSettings(s);
                 }}
               />
             </div>
@@ -509,9 +548,9 @@ export default function App() {
                 className="ms-input"
                 placeholder="google/gemini-2.0-flash-001"
                 value={settings.model || ""}
-                onChange={(e) => {
+                onChange={async (e) => {
                   const s = { ...settings, model: e.target.value };
-                  setSettings(s); saveSettings(s);
+                  setSettings(s); await saveSettings(s);
                 }}
               />
               <p style={{ fontSize: "0.72rem", color: "#857c69", marginTop: 6 }}>
@@ -519,7 +558,7 @@ export default function App() {
                 <a href="https://openrouter.ai/keys" target="_blank" rel="noopener" style={{ color: "#4c9a63" }}>openrouter.ai/keys</a>
               </p>
             </div>
-            <button className="ms-save" onClick={() => {
+            <button className="ms-save" onClick={async () => {
               setShowSettings(false);
               aiRan.current = false;
               setAiInsight(null);
@@ -530,6 +569,7 @@ export default function App() {
           </div>
         </div>
       )}
+      {showAnalysis && <GardenAnalysis regions={regions} onClose={() => setShowAnalysis(false)} />}
     </div>
   );
 }

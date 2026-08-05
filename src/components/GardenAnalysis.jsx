@@ -4,21 +4,35 @@ import * as api from "../api.js";
 const SCORE_COLOR = (s) => s >= 70 ? "#4c9a63" : s >= 40 ? "#e0a84a" : "#c0392b";
 const PRIORITY_STYLE = { high: "color: #c0392b; font-weight: 600;", medium: "color: #b9852a;", low: "color: #8a9079;" };
 
-export default function GardenAnalysis({ onClose }) {
+export default function GardenAnalysis({ regions, onClose }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    api.analyzeAll()
-      .then(setData)
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+    try {
+      const result = api.analyzeAll(regions);
+      setData(result);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [regions]);
 
   if (loading) return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal analysis-modal" onClick={(e) => e.stopPropagation()}>
         <div className="analysis-loading">Analyzing your garden…</div>
+      </div>
+    </div>
+  );
+
+  if (error) return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal analysis-modal" onClick={(e) => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}>✕</button>
+        <div className="analysis-loading" style={{ color: "#c0392b" }}>Error: {error}</div>
       </div>
     </div>
   );

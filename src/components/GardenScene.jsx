@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { threadById, timeAgo, needsWater } from "../data.js";
 import { PixelSprite } from "../pixels.jsx";
 
-function BedCard({ region, onSelect, onStartTimer, onWater }) {
+function BedCard({ region, onSelect, onStartTimer, onWater, hasTimer }) {
   const t = threadById[region.thread];
   const thirsty = needsWater(region.lastTs);
   const plants = region.plants || [];
@@ -15,6 +15,7 @@ function BedCard({ region, onSelect, onStartTimer, onWater }) {
   return (
     <button className="g-card" style={{ "--rc": t?.color }} onClick={() => onSelect(region.id)}>
       {thirsty && <span className="g-card-thirst">💧</span>}
+      {hasTimer && <span className="g-card-thirst" style={{ right: thirsty ? 32 : 12 }}>☀️</span>}
       <div className="g-card-top">
         <div className="g-card-sprites">
           {Array.from({ length: count }).map((_, i) => (
@@ -45,7 +46,7 @@ function BedCard({ region, onSelect, onStartTimer, onWater }) {
   );
 }
 
-export default function GardenScene({ regions, hover, selected, timerId, onHover, onSelect, onWater, onStartTimer, aiInsight, onRefreshAI, hasApiKey }) {
+export default function GardenScene({ regions, hover, selected, timerIds = [], onHover, onSelect, onWater, onStartTimer, onAnalyze, aiInsight, onRefreshAI, hasApiKey }) {
   const thirstyCount = regions.filter((r) => needsWater(r.lastTs)).length;
   const totalSun = regions.reduce((n, r) => n + (r.sunshine || 0), 0);
   const totalTended = regions.reduce((n, r) => n + r.tended, 0);
@@ -112,7 +113,7 @@ export default function GardenScene({ regions, hover, selected, timerId, onHover
 
       <div className="g-grid">
         {regions.map((r) => (
-          <BedCard key={r.id} region={r} onSelect={onSelect} onStartTimer={onStartTimer} onWater={onWater} />
+          <BedCard key={r.id} region={r} onSelect={onSelect} onStartTimer={onStartTimer} onWater={onWater} hasTimer={timerIds.includes(r.id)} />
         ))}
       </div>
     </section>

@@ -3,6 +3,7 @@ import { dayKey, threadById } from "../data.js";
 
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
 const fmtHour = (h) => `${String(h).padStart(2, "0")}:00`;
+const EVENT_ICON = { water: "💧", note: "✎", grow: "🌸", sun: "☀️", checkin: "🌱" };
 
 function buildICS(slots, byId, date) {
   const p = (n) => String(n).padStart(2, "0");
@@ -46,12 +47,29 @@ function getAllFruits(regions) {
   return fruits;
 }
 
+function getTodayActivity(regions, today) {
+  const byHour = {};
+  regions.forEach((r) => {
+    const thread = threadById[r.thread];
+    (r.logs || []).forEach((l) => {
+      const d = new Date(l.ts);
+      const dk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      if (dk !== today) return;
+      const h = d.getHours();
+      if (!byHour[h]) byHour[h] = [];
+      byHour[h].push({ ...l, regionId: r.id, regionLabel: r.label, color: thread?.color });
+    });
+  });
+  return byHour;
+}
+
 export default function DaySchedule({ regions = [] }) {
   const today = dayKey(new Date());
   const storeKey = `vsg_schedule_${today}`;
   const byId = Object.fromEntries(regions.map((r) => [r.id, r]));
   const nowH = new Date().getHours();
   const todayFruits = useMemo(() => getAllFruits(regions).filter((f) => f.dateKey === today), [regions, today]);
+  const todayActivity = useMemo(() => getTodayActivity(regions, today), [regions, today]);
 
   const [slots, setSlots] = useState(() => {
     try {
@@ -150,21 +168,13 @@ export default function DaySchedule({ regions = [] }) {
           const isNow = h === nowH;
           const dueFruit = todayFruits.find((f) => f.hour === h);
 
-          if (coverage[h] != null && !filled && active !== h) {
-            const ps = slots[coverage[h]] || [];
-            const firstTask = Array.isArray(ps) ? ps[0] : ps;
-            const pb = firstTask?.bedId ? byId[firstTask.bedId] : null;
-            const pt = pb ? threadById[pb.thread] : null;
-            return (
-              <li key={h} className={`slot slot-cont-row ${isNow ? "now" : ""}`}>
-                <span className="slot-time">{fmtHour(h)}</span>
-                <span className="slot-continuation" onClick={() => setActive(coverage[h])}>
-                  {pt && <span className="slot-dot" style={{ background: pt.color }} />}
-                  <span>↑ {pb ? pb.label : "continues"}</span>
-                </span>
-              </li>
-            );
-          }
+          const hasCont = coverage[h] != null;
+          const contSrc = hasCont ? (slots[coverage[h]] || []) : [];
+          const contFirst = Array.isArray(contSrc) ? contSrc[0] : contSrc;
+          const contBed = contFirst?.bedId ? byId[contFirst.bedId] : null;
+          const contThread = contBed ? threadById[contBed.thread] : null;
+          const hourActivity = todayActivity[h] || [];
+          const hasActivity = hourActivity.length > 0;
 
           return (
             <li key={h} className={`slot ${isNow ? "now" : ""} ${filled ? "filled" : ""} ${editing ? "editing" : ""}`}>
@@ -192,6 +202,18 @@ export default function DaySchedule({ regions = [] }) {
                         );
                       })}
                     </div>
+                  ) : hasActivity ? (
+                    <div className="slot-tasks">
+                      {hourActivity.map((a, i) => (
+                        <div key={i} className="slot-task">
+                          <span className="slot-dot" style={{ background: a.color }} />
+                          <span className="slot-task-main">
+                            <span className="slot-task-bed">{a.regionLabel}</span>
+                            <span className="slot-task-text">{EVENT_ICON[a.type] || "•"} {a.text}</span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   ) : dueFruit ? (
                     <span className="slot-fruit">
                       <span className="slot-dot" style={{ background: "#e0a030" }} />
@@ -203,6 +225,13 @@ export default function DaySchedule({ regions = [] }) {
                 </button>
               ) : (
                 <div className="slot-editor">
+                  {hasCont && (
+                    <button className="slot-continuation" onClick={() => setActive(coverage[h])} style={{ marginBottom: 6 }}>
+                      {contThread && <span className="slot-dot" style={{ background: contThread.color }} />}
+                      <span>↑ {contBed ? contBed.label : "continues"}</span>
+                    </button>
+                  )}
+
                   {tasks.map((task, idx) => {
                     const bed = task.bedId ? byId[task.bedId] : null;
                     const plant = bed && task.plantId ? (bed.plants || []).find((p) => p.id === task.plantId) : null;
@@ -248,7 +277,11 @@ export default function DaySchedule({ regions = [] }) {
                             {(task.hours || 1) > 1 && <span className="dur-until">→ {h + (task.hours || 1) >= 24 ? "24:00" : fmtHour(h + (task.hours || 1))}</span>}
                           </div>
                         </div>
-                        <button className="task-remove" onClick={() => { removeTask(h, idx); if (getTasks(h).length <= 1) setActive(null); }}>✕</button>
+                        <button className="task-remove" onClick={() => {
+                          const future = getTasks(h).filter((_, i) => i !== idx);
+                          removeTask(h, idx);
+                          if (future.length === 0 && !hasCont) setActive(null);
+                        }}>✕</button>
                       </div>
                     );
                   })}
