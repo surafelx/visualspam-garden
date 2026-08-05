@@ -109,28 +109,20 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 @keyframes sway { 0%,100% { transform: rotate(-1.4deg); } 50% { transform: rotate(1.4deg); } }
 .g-card.stage-flourishing .g-card-sprites { filter: drop-shadow(0 0 4px color-mix(in srgb, var(--rc) 30%, transparent)); }
 
-.g-card-sun {
-  width: 28px; height: 28px; border-radius: 50%; font-size: 0.82rem;
-  display: grid; place-items: center; opacity: 0;
-  transition: opacity 0.15s;
-}
-.g-card:hover .g-card-sun { opacity: 1; }
-.g-card-sun:hover { background: rgba(255,216,115,0.3); }
-
 .g-card-actions {
-  display: flex; gap: 6px; margin-top: 10px;
+  display: flex; gap: 6px; margin-top: 12px;
 }
 .g-card-action {
   flex: 1; display: flex; align-items: center; justify-content: center;
-  padding: 8px 0; border-radius: 10px; font-family: inherit; font-size: 0.76rem; font-weight: 600;
-  border: 1px solid #ddd6c4; background: #fff; color: #4a463c;
-  transition: background 0.12s, border-color 0.12s, transform 0.1s;
+  padding: 9px 0; border-radius: 10px; font-size: 1.1rem;
+  border: none; cursor: pointer;
+  transition: filter 0.12s, transform 0.1s;
 }
-.g-card-action:active { transform: scale(0.96); }
-.g-card-water { border-color: #b8d8f0; color: #2a7ab5; }
-.g-card-water:hover { background: #e8f4fc; border-color: #7cb8d8; }
-.g-card-sun { border-color: #f0dca0; color: #b07a20; }
-.g-card-sun:hover { background: #fdf3d8; border-color: #d4b060; }
+.g-card-action:active { transform: scale(0.95); }
+.g-card-water { background: #d4eef8; color: #2070a0; }
+.g-card-water:hover { background: #bdd8ea; filter: brightness(0.97); }
+.g-card-sun { background: #fde8a8; color: #9a6d10; }
+.g-card-sun:hover { background: #f5d878; filter: brightness(0.97); }
 
 .g-card-mid { margin-bottom: 6px; }
 .g-card-name { font-family: var(--font); font-size: 0.92rem; font-weight: 600; color: #2c2920; }
