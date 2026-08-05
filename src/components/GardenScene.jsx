@@ -8,7 +8,6 @@ function BedCard({ region, onSelect, onStartTimer, onWater }) {
   const plants = region.plants || [];
   const pendingFruits = plants.reduce((n, p) => n + (p.fruits || []).filter((f) => !f.done).length, 0);
   const doneFruits = plants.reduce((n, p) => n + (p.fruits || []).filter((f) => f.done).length, 0);
-  const lastLog = (region.logs || [])[0];
   const spriteSize = 38;
   const count = plants.length > 0 ? Math.min(plants.length, 5) : 1;
 
@@ -24,7 +23,6 @@ function BedCard({ region, onSelect, onStartTimer, onWater }) {
       </div>
       <div className="g-card-mid">
         <div className="g-card-name">{region.label}</div>
-        {region.note && <div className="g-card-summary">{region.note}</div>}
       </div>
       <div className="g-card-stats">
         <span className="g-stat"><span className="g-stat-icon">☀️</span><span className="g-stat-val">{region.sunshine || 0}</span><span className="g-stat-unit">m</span></span>
@@ -33,12 +31,6 @@ function BedCard({ region, onSelect, onStartTimer, onWater }) {
         {pendingFruits > 0 && <span className="g-stat g-stat-fruit"><span className="g-stat-icon">🍊</span><span className="g-stat-val">{pendingFruits}</span></span>}
         {doneFruits > 0 && <span className="g-stat g-stat-done"><span className="g-stat-icon">✓</span><span className="g-stat-val">{doneFruits}</span></span>}
       </div>
-      {lastLog && (
-        <div className="g-card-log">
-          <span className="g-card-log-icon">{lastLog.type === "water" ? "💧" : lastLog.type === "sun" ? "☀️" : lastLog.type === "note" ? "✎" : "•"}</span>
-          <span className="g-card-log-text">{lastLog.text?.slice(0, 40)}</span>
-        </div>
-      )}
       <div className="g-card-actions">
         <button className="g-card-action g-card-water" title="Water" onClick={(e) => { e.stopPropagation(); onWater(region.id); }}>
           💧
