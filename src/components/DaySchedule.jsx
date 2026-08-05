@@ -56,7 +56,6 @@ export default function DaySchedule({ regions = [] }) {
   const [slots, setSlots] = useState(() => {
     try {
       const raw = JSON.parse(localStorage.getItem(storeKey)) || {};
-      // migrate: ensure each hour is an array
       const migrated = {};
       Object.entries(raw).forEach(([h, v]) => {
         migrated[h] = Array.isArray(v) ? v : v ? [v] : [];
@@ -88,7 +87,6 @@ export default function DaySchedule({ regions = [] }) {
 
   const planned = Object.values(slots).reduce((n, tasks) => n + (Array.isArray(tasks) ? tasks.filter((t) => t && (t.bedId || (t.text && t.text.trim()))).length : 0), 0);
 
-  // coverage: hours spanned by longer tasks → the hour they continue from
   const coverage = {};
   Object.entries(slots).forEach(([hs, tasks]) => {
     if (!Array.isArray(tasks)) return;
@@ -114,27 +112,33 @@ export default function DaySchedule({ regions = [] }) {
   return (
     <div className="schedule">
       <header className="schedule-head">
-        <div>
+        <div className="schedule-head-left">
           <h1>Today's plan</h1>
-          <p>Plan your hours. Add multiple tasks per slot. Fruits due today show automatically.</p>
+          <p>Plan your hours. Add multiple tasks per slot.</p>
         </div>
         <div className="schedule-head-right">
-          <span className="schedule-count">{planned} tasks planned</span>
+          <span className="schedule-count">{planned} planned</span>
           <button className="sync-btn" onClick={syncToCalendar} disabled={planned === 0}>
-            🗓️ Export .ics
+            📅 Export
           </button>
         </div>
       </header>
 
       {todayFruits.length > 0 && (
-        <div className="fruit-deadlines-bar">
-          <span className="fdb-label">🍊 Due today</span>
-          {todayFruits.map((f) => (
-            <span key={f.id} className="fdb-item">
-              <span className="fdb-dot" style={{ background: threadById[byId[f.bedId]?.thread]?.color }} />
-              {f.plantName} — {f.title}
-            </span>
-          ))}
+        <div className="fruit-bar">
+          <div className="fruit-bar-header">
+            <span className="fruit-bar-icon">🍊</span>
+            <span className="fruit-bar-title">Due today</span>
+          </div>
+          <div className="fruit-bar-items">
+            {todayFruits.map((f) => (
+              <span key={f.id} className="fruit-pill">
+                <span className="fruit-pill-dot" style={{ background: threadById[byId[f.bedId]?.thread]?.color }} />
+                <span className="fruit-pill-bed">{f.plantName}</span>
+                <span className="fruit-pill-name">{f.title}</span>
+              </span>
+            ))}
+          </div>
         </div>
       )}
 
@@ -146,18 +150,17 @@ export default function DaySchedule({ regions = [] }) {
           const isNow = h === nowH;
           const dueFruit = todayFruits.find((f) => f.hour === h);
 
-          // this hour is spanned by a longer task above it → show continuation
           if (coverage[h] != null && !filled && active !== h) {
             const ps = slots[coverage[h]] || [];
             const firstTask = Array.isArray(ps) ? ps[0] : ps;
             const pb = firstTask?.bedId ? byId[firstTask.bedId] : null;
             const pt = pb ? threadById[pb.thread] : null;
             return (
-              <li key={h} className={`slot cont ${isNow ? "now" : ""}`}>
+              <li key={h} className={`slot slot-cont-row ${isNow ? "now" : ""}`}>
                 <span className="slot-time">{fmtHour(h)}</span>
-                <span className="slot-cont" onClick={() => setActive(coverage[h])}>
+                <span className="slot-continuation" onClick={() => setActive(coverage[h])}>
                   {pt && <span className="slot-dot" style={{ background: pt.color }} />}
-                  <i>↑ {pb ? pb.label : "continues"}</i>
+                  <span>↑ {pb ? pb.label : "continues"}</span>
                 </span>
               </li>
             );
@@ -170,26 +173,29 @@ export default function DaySchedule({ regions = [] }) {
               {!editing ? (
                 <button className="slot-summary" onClick={() => setActive(h)}>
                   {filled ? (
-                    <div className="slot-tasks-preview">
+                    <div className="slot-tasks">
                       {tasks.filter((t) => t && (t.bedId || t.text)).map((t, i) => {
                         const bed = t.bedId ? byId[t.bedId] : null;
                         const plant = bed && t.plantId ? (bed.plants || []).find((p) => p.id === t.plantId) : null;
                         const thread = bed ? threadById[bed.thread] : null;
                         const hours = t.hours || 1;
                         return (
-                          <span key={i} className="slot-task-chip">
+                          <div key={i} className="slot-task">
                             {thread && <span className="slot-dot" style={{ background: thread.color }} />}
-                            {bed && <b>{bed.label}</b>}
-                            {plant && <span className="slot-plant-tag">→ {plant.name}</span>}
-                            {t.text && <span className="slot-what">{t.text}</span>}
-                            {hours > 1 && <span className="slot-dur">{fmtHour(h)}–{h + hours >= 24 ? "24:00" : fmtHour(h + hours)}</span>}
-                          </span>
+                            <span className="slot-task-main">
+                              {bed && <span className="slot-task-bed">{bed.label}</span>}
+                              {plant && <span className="slot-task-plant">→ {plant.name}</span>}
+                              {t.text && <span className="slot-task-text">{t.text}</span>}
+                            </span>
+                            {hours > 1 && <span className="slot-task-dur">{hours}h</span>}
+                          </div>
                         );
                       })}
                     </div>
                   ) : dueFruit ? (
-                    <span className="slot-fruit-hint">
-                      🍊 {dueFruit.plantName} — {dueFruit.title}
+                    <span className="slot-fruit">
+                      <span className="slot-dot" style={{ background: "#e0a030" }} />
+                      <span className="slot-fruit-text">{dueFruit.plantName} — {dueFruit.title}</span>
                     </span>
                   ) : (
                     <span className="slot-empty">+ plan this hour</span>
@@ -202,25 +208,26 @@ export default function DaySchedule({ regions = [] }) {
                     const plant = bed && task.plantId ? (bed.plants || []).find((p) => p.id === task.plantId) : null;
                     return (
                       <div key={idx} className="task-row">
-                        <div className="task-pickers">
-                          <div className="pick-row">
+                        <div className="task-body">
+                          <div className="task-chips">
                             {regions.map((r) => {
                               const rt = threadById[r.thread];
                               return (
-                                <button key={r.id} className={`bed-chip ${task.bedId === r.id ? "on" : ""}`}
+                                <button key={r.id} className={`chip ${task.bedId === r.id ? "on" : ""}`}
                                   style={{ "--rc": rt?.color }}
                                   onClick={() => updateTask(h, idx, { bedId: r.id, plantId: null })}>
-                                  <span className="bed-chip-dot" style={{ background: rt?.color }} />{r.label}
+                                  <span className="chip-dot" style={{ background: rt?.color }} />
+                                  {r.label}
                                 </button>
                               );
                             })}
                           </div>
 
                           {bed && (bed.plants || []).length > 0 && (
-                            <div className="pick-row plant-pick">
-                              <span className="pick-label">plants</span>
+                            <div className="task-chips task-chips-sub">
+                              <span className="chip-label">plants</span>
                               {bed.plants.map((p) => (
-                                <button key={p.id} className={`bed-chip plant-chip ${task.plantId === p.id ? "on" : ""}`}
+                                <button key={p.id} className={`chip chip-sm ${task.plantId === p.id ? "on" : ""}`}
                                   onClick={() => updateTask(h, idx, { plantId: task.plantId === p.id ? null : p.id })}>
                                   🌱 {p.name}
                                 </button>
@@ -228,17 +235,17 @@ export default function DaySchedule({ regions = [] }) {
                             </div>
                           )}
 
-                          <input className="slot-input" autoFocus={idx === 0} value={task.text || ""}
+                          <input className="task-input" autoFocus={idx === 0} value={task.text || ""}
                             onChange={(e) => updateTask(h, idx, { text: e.target.value })}
                             onKeyDown={(e) => e.key === "Enter" && setActive(null)}
                             placeholder="what will you do…" />
 
-                          <div className="pick-row dur-row">
-                            <span className="pick-label">duration</span>
+                          <div className="task-duration">
+                            <span className="chip-label">duration</span>
                             <button className="dur-btn" onClick={() => updateTask(h, idx, { hours: Math.max(1, (task.hours || 1) - 1) })} disabled={(task.hours || 1) <= 1}>−</button>
                             <span className="dur-val">{task.hours || 1}h</span>
                             <button className="dur-btn" onClick={() => updateTask(h, idx, { hours: Math.min(24 - h, (task.hours || 1) + 1) })} disabled={h + (task.hours || 1) >= 24}>+</button>
-                            <span className="dur-until">{(task.hours || 1) > 1 ? `until ${h + (task.hours || 1) >= 24 ? "24:00" : fmtHour(h + (task.hours || 1))}` : ""}</span>
+                            {(task.hours || 1) > 1 && <span className="dur-until">→ {h + (task.hours || 1) >= 24 ? "24:00" : fmtHour(h + (task.hours || 1))}</span>}
                           </div>
                         </div>
                         <button className="task-remove" onClick={() => { removeTask(h, idx); if (getTasks(h).length <= 1) setActive(null); }}>✕</button>
@@ -246,10 +253,12 @@ export default function DaySchedule({ regions = [] }) {
                     );
                   })}
 
-                  <div className="editor-actions">
-                    <button className="ed-add" onClick={() => addTask(h)}>+ Add task</button>
-                    <button className="ed-done" onClick={() => setActive(null)}>done</button>
-                    {tasks.length > 0 && <button className="ed-clear" onClick={() => { save({ ...slots, [h]: [] }); setActive(null); }}>clear</button>}
+                  <div className="editor-footer">
+                    <button className="btn-add-task" onClick={() => addTask(h)}>+ Add task</button>
+                    <div className="editor-footer-right">
+                      {tasks.length > 0 && <button className="btn-text" onClick={() => { save({ ...slots, [h]: [] }); setActive(null); }}>clear</button>}
+                      <button className="btn-done" onClick={() => setActive(null)}>done</button>
+                    </div>
                   </div>
                 </div>
               )}

@@ -41,10 +41,10 @@ function BedCard({ region, onSelect, onStartTimer, onWater }) {
       )}
       <div className="g-card-actions">
         <button className="g-card-action g-card-water" title="Water" onClick={(e) => { e.stopPropagation(); onWater(region.id); }}>
-          Water
+          💧
         </button>
         <button className="g-card-action g-card-sun" title="Give sunshine" onClick={(e) => { e.stopPropagation(); onStartTimer(region.id); }}>
-          Sunshine
+          ☀️
         </button>
       </div>
     </button>
