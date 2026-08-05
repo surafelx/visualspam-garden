@@ -1028,6 +1028,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 }
 .g-ai-icon { font-size: 1rem; color: #4c9a63; flex: 0 0 auto; }
 .g-ai-text { flex: 1; font-size: 0.8rem; color: #4a463c; line-height: 1.5; }
+.g-ai-loading { color: #a39a86; font-style: italic; }
 .g-ai-refresh {
   flex: 0 0 auto; width: 26px; height: 26px; border-radius: 7px;
   font-size: 0.85rem; color: #8a7e6b; background: none; border: 1px solid #ddd6c4;

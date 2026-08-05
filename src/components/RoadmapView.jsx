@@ -41,10 +41,10 @@ export default function RoadmapView({ regions, onSelectBed }) {
           const dl = new Date(f.deadline);
           items.push({
             id: f.id,
-            fruit: f.label,
-            plant: p.label,
+            fruit: f.label || "Untitled",
+            plant: p.label || "Unknown plant",
             bedId: r.id,
-            bed: r.label,
+            bed: r.label || "Unknown bed",
             thread: r.thread,
             deadline: dl.getTime(),
             done: !!f.done,
@@ -96,7 +96,7 @@ export default function RoadmapView({ regions, onSelectBed }) {
             <div className="roadmap-alert roadmap-alert-overdue">
               <span className="roadmap-alert-icon">⚠</span>
               <span className="roadmap-alert-text">
-                {overdue.length} overdue: {overdue.map((f) => f.fruit).join(", ")}
+                {overdue.length} overdue: {overdue.map((f) => f.fruit || "untitled").join(", ")}
               </span>
             </div>
           )}
@@ -104,7 +104,7 @@ export default function RoadmapView({ regions, onSelectBed }) {
             <div className="roadmap-alert roadmap-alert-soon">
               <span className="roadmap-alert-icon">⏰</span>
               <span className="roadmap-alert-text">
-                {dueSoon.length} due soon: {dueSoon.map((f) => `${f.fruit} (${fmtShort(new Date(f.deadline))})`).join(", ")}
+                {dueSoon.length} due soon: {dueSoon.map((f) => `${f.fruit || "untitled"} (${fmtShort(new Date(f.deadline))})`).join(", ")}
               </span>
             </div>
           )}

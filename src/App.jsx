@@ -225,7 +225,7 @@ export default function App() {
     { id: "garden", icon: "🌱", label: "Garden" },
     { id: "day", icon: "🕐", label: "Day plan" },
     { id: "calendar", icon: "📅", label: "Timeline" },
-    { id: "roadmap", icon: "🗺", label: "Roadmap" },
+    { id: "roadmap", icon: "🎯", label: "Roadmap" },
     { id: "library", icon: "📖", label: "Library" },
   ];
   const thirsty = regions.filter((r) => (Date.now() - new Date(r.lastTs).getTime()) / 864e5 >= 4).length;
@@ -263,6 +263,7 @@ export default function App() {
             onDeleteBed={(id) => setConfirmDelete(id)}
             aiInsight={aiInsight}
             onRefreshAI={() => { aiRan.current = false; aiAnalyze(regions, settings).then((t) => t && setAiInsight(t)); }}
+            hasApiKey={!!settings.apiKey}
           />
         ) : view === "bed" && selected ? (
           <BedDetailPage

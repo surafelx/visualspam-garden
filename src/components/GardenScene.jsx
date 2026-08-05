@@ -45,7 +45,7 @@ function BedCard({ region, onSelect, onStartTimer, onWater }) {
   );
 }
 
-export default function GardenScene({ regions, hover, selected, timerId, onHover, onSelect, onWater, onStartTimer, aiInsight, onRefreshAI }) {
+export default function GardenScene({ regions, hover, selected, timerId, onHover, onSelect, onWater, onStartTimer, aiInsight, onRefreshAI, hasApiKey }) {
   const thirstyCount = regions.filter((r) => needsWater(r.lastTs)).length;
   const totalSun = regions.reduce((n, r) => n + (r.sunshine || 0), 0);
   const totalTended = regions.reduce((n, r) => n + r.tended, 0);
@@ -96,13 +96,19 @@ export default function GardenScene({ regions, hover, selected, timerId, onHover
         )}
       </div>
 
-      {aiInsight && (
-        <div className="g-ai-row">
-          <span className="g-ai-icon">✦</span>
-          <span className="g-ai-text">{aiInsight}</span>
-          <button className="g-ai-refresh" onClick={onRefreshAI} title="Refresh insight">↻</button>
-        </div>
-      )}
+      <div className="g-ai-row">
+        <span className="g-ai-icon">✦</span>
+        {aiInsight ? (
+          <>
+            <span className="g-ai-text">{aiInsight}</span>
+            <button className="g-ai-refresh" onClick={onRefreshAI} title="Refresh insight">↻</button>
+          </>
+        ) : hasApiKey ? (
+          <span className="g-ai-text g-ai-loading">Analyzing garden…</span>
+        ) : (
+          <span className="g-ai-text">AI insights — set your OpenRouter API key in ⚙ Settings to activate</span>
+        )}
+      </div>
 
       <div className="g-grid">
         {regions.map((r) => (
