@@ -118,6 +118,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    setLibraryArticles(getAllArticles());
+  }, []);
+
+  useEffect(() => {
     if (view === "garden") setLibraryArticles(getAllArticles());
   }, [view]);
 
