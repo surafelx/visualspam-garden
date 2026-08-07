@@ -93,8 +93,34 @@ export default function GardenScene({ regions, articles = [], hover, selected, t
     { x: 70, y: 95 }, { x: 2, y: 70 }, { x: 97, y: 65 },
   ];
 
+  const PARTICLES = Array.from({ length: 15 }, (_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    delay: Math.random() * 8,
+    duration: 6 + Math.random() * 6,
+    size: 0.6 + Math.random() * 0.8,
+    char: ["✿", "❀", "✾", "❁", "UIT", "✿", "·"][i % 7],
+  }));
+
   return (
     <section className="garden-dash">
+      <div className="g-particles">
+        {PARTICLES.map((p) => (
+          <span
+            key={p.id}
+            className="g-particle"
+            style={{
+              left: `${p.x}%`,
+              animationDelay: `${p.delay}s`,
+              animationDuration: `${p.duration}s`,
+              fontSize: `${p.size}rem`,
+            }}
+          >
+            {p.char}
+          </span>
+        ))}
+      </div>
+
       <div className="g-clock-row">
         <div className="g-clock">
           <span className="g-clock-time">{String(H).padStart(2, "0")}:{M}:{S}</span>
@@ -151,13 +177,14 @@ export default function GardenScene({ regions, articles = [], hover, selected, t
         <div className="g-entries-section">
           <div className="g-entries-head">
             <h2 className="g-entries-title">Recent Entries</h2>
-            <button className="g-entries-viewall" onClick={onSelectArticle}>View all →</button>
+            <button className="g-entries-viewall" onClick={() => onSelectArticle(null)}>View all →</button>
           </div>
           <div className="g-entries-grid">
             {articles.slice(0, 4).map((a) => {
               const t = threadById[a.thread];
               return (
-                <button key={a.id} className="g-entry-card" onClick={onSelectArticle}>
+                <button key={a.id} className="g-entry-card" onClick={() => onSelectArticle(a)}>
+                  <div className="g-entry-accent" style={{ background: t?.color }} />
                   <div className="g-entry-body">
                     <span className="g-entry-kind">{a.kind}</span>
                     <h3 className="g-entry-title">{a.title}</h3>

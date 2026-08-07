@@ -8,6 +8,11 @@ function loadCustom() {
 }
 function saveCustom(list) { localStorage.setItem("vsg_library", JSON.stringify(list)); }
 
+function loadDrafts() {
+  try { return JSON.parse(localStorage.getItem("vsg_library_drafts") || "[]"); } catch { return []; }
+}
+function saveDrafts(list) { localStorage.setItem("vsg_library_drafts", JSON.stringify(list)); }
+
 function loadDeleted() {
   try { return JSON.parse(localStorage.getItem("vsg_library_deleted") || "[]"); } catch { return []; }
 }
@@ -18,6 +23,10 @@ export function getAllArticles() {
   const deleted = loadDeleted();
   const activeSeeds = seedArticles.filter((a) => !deleted.includes(a.id));
   return [...custom, ...activeSeeds];
+}
+
+function slugify(text) {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
 function getBlocks(article) {
@@ -155,7 +164,7 @@ function ArticleForm({ onSave, onCancel, initial, regions = [] }) {
     });
   };
 
-  const save = () => {
+  const save = (asDraft = false) => {
     if (!title.trim()) return;
     const hasContent = blocks.some((b) => (b.type === "text" || b.type === "h2" || b.type === "h3") && b.content?.trim());
     if (!hasContent) return;
@@ -176,6 +185,8 @@ function ArticleForm({ onSave, onCancel, initial, regions = [] }) {
       minutes: mins,
       dateLabel: initial?.dateLabel || new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
       excerpt, body: bodyText, blocks,
+      draft: asDraft,
+      slug: slugify(title.trim()),
     });
   };
 
@@ -185,7 +196,8 @@ function ArticleForm({ onSave, onCancel, initial, regions = [] }) {
         <button className="lf-back" onClick={onCancel}>← Back</button>
         <div className="lf-editor-bar-actions">
           <button className="lf-btn lf-btn-ghost" onClick={onCancel}>Cancel</button>
-          <button className="lf-btn lf-btn-primary" onClick={save} disabled={!title.trim()}>Publish</button>
+          <button className="lf-btn lf-btn-draft" onClick={() => save(true)} disabled={!title.trim()}>Save Draft</button>
+          <button className="lf-btn lf-btn-primary" onClick={() => save(false)} disabled={!title.trim()}>Publish</button>
         </div>
       </div>
       <div className="lf-editor-body">
@@ -453,8 +465,9 @@ function formatDate(dk) {
   return d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
 }
 
-export default function Library({ regions = [] }) {
+export default function Library({ regions = [], selectedId = null, onSelectArticle = null }) {
   const [custom, setCustom] = useState(loadCustom);
+  const [drafts, setDrafts] = useState(loadDrafts);
   const [deleted, setDeleted] = useState(loadDeleted);
   const [tab, setTab] = useState("entries");
   const [filter, setFilter] = useState("All");
@@ -467,7 +480,7 @@ export default function Library({ regions = [] }) {
     return [...custom, ...activeSeeds];
   }, [custom, deleted]);
   const filtered = useMemo(() => filter === "All" ? allArticles : allArticles.filter((a) => a.kind === filter), [allArticles, filter]);
-  const open = allArticles.find((a) => a.id === openId);
+  const open = openId ? allArticles.find((a) => a.id === openId) : null;
 
   const counts = useMemo(() => {
     const c = { All: allArticles.length };
@@ -475,7 +488,25 @@ export default function Library({ regions = [] }) {
     return c;
   }, [allArticles]);
 
+  useEffect(() => {
+    if (selectedId) {
+      const found = allArticles.find((a) => a.id === selectedId);
+      if (found) setOpenId(selectedId);
+    }
+  }, [selectedId, allArticles]);
+
   const handleSave = (article) => {
+    if (article.draft) {
+      const { draft, ...draftData } = article;
+      const exists = drafts.findIndex((d) => d.id === article.id);
+      let next;
+      if (exists >= 0) { next = [...drafts]; next[exists] = draftData; }
+      else { next = [draftData, ...drafts]; }
+      setDrafts(next);
+      saveDrafts(next);
+      setEditing(null);
+      return;
+    }
     const exists = custom.findIndex((a) => a.id === article.id);
     let next;
     if (exists >= 0) { next = [...custom]; next[exists] = article; }
@@ -485,11 +516,25 @@ export default function Library({ regions = [] }) {
     setEditing(null);
   };
 
+  const handlePublishDraft = (draft) => {
+    const article = { ...draft, draft: false };
+    const nextDrafts = drafts.filter((d) => d.id !== draft.id);
+    setDrafts(nextDrafts);
+    saveDrafts(nextDrafts);
+    const next = [article, ...custom];
+    setCustom(next);
+    saveCustom(next);
+  };
+
   const handleDelete = (id) => {
     if (id.startsWith("custom_")) {
       const next = custom.filter((a) => a.id !== id);
       setCustom(next);
       saveCustom(next);
+    } else if (id.startsWith("draft_")) {
+      const next = drafts.filter((d) => d.id !== id);
+      setDrafts(next);
+      saveDrafts(next);
     } else {
       const next = [...deleted, id];
       setDeleted(next);
@@ -511,13 +556,15 @@ export default function Library({ regions = [] }) {
     return (
       <ArticleReader
         article={open}
-        onBack={() => setOpenId(null)}
+        onBack={() => { setOpenId(null); if (onSelectArticle) onSelectArticle(null); }}
         onEdit={() => { setEditing(open); setOpenId(null); }}
         onDelete={() => setConfirmDelete(openId)}
         regions={regions}
       />
     );
   }
+
+  const displayDrafts = tab === "drafts" ? drafts : [];
 
   return (
     <div className="library">
@@ -529,6 +576,9 @@ export default function Library({ regions = [] }) {
         <div className="lf-tabs">
           <button className={`lf-tab ${tab === "entries" ? "on" : ""}`} onClick={() => setTab("entries")}>
             Entries <span className="lf-tab-count">{allArticles.length}</span>
+          </button>
+          <button className={`lf-tab ${tab === "drafts" ? "on" : ""}`} onClick={() => setTab("drafts")}>
+            Drafts <span className="lf-tab-count">{drafts.length}</span>
           </button>
           <button className={`lf-tab ${tab === "logs" ? "on" : ""}`} onClick={() => setTab("logs")}>
             Activity Log <span className="lf-tab-count">{regions.reduce((n, r) => n + (r.logs?.length || 0), 0)}</span>
@@ -582,6 +632,38 @@ export default function Library({ regions = [] }) {
             })}
           </div>
         </>
+      ) : tab === "drafts" ? (
+        <div className="lf-shelf">
+          {drafts.length === 0 && <div className="lf-empty-state"><div className="lf-empty-icon">📝</div><p>No drafts yet. Start writing and save as draft.</p></div>}
+          {drafts.map((a) => {
+            const t = threadById[a.thread];
+            return (
+              <div key={a.id} className="lf-card-wrap">
+                <button className="lf-card lf-card-draft" onClick={() => { setEditing(a); }}>
+                  <div className="lf-card-body">
+                    <div className="lf-card-top">
+                      <span className="lf-card-kind">{a.kind}</span>
+                      <span className="lf-card-draft-badge">Draft</span>
+                    </div>
+                    <h3 className="lf-card-title">{a.title}</h3>
+                    <p className="lf-card-excerpt">{a.excerpt}</p>
+                    <div className="lf-card-foot">
+                      <span className="lf-card-dot" style={{ background: t?.color }} />
+                      <span>{t?.name}</span>
+                      <span className="lf-card-sep">·</span>
+                      <span>{a.minutes} min</span>
+                    </div>
+                  </div>
+                </button>
+                <div className="lf-card-actions">
+                  <button className="lf-card-action lf-card-action-publish" onClick={(e) => { e.stopPropagation(); handlePublishDraft(a); }}>Publish</button>
+                  <button className="lf-card-action" onClick={(e) => { e.stopPropagation(); setEditing(a); }}>Edit</button>
+                  <button className="lf-card-action lf-card-action-del" onClick={(e) => { e.stopPropagation(); setConfirmDelete(a.id); }}>Delete</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : (
         <LogSection regions={regions} />
       )}

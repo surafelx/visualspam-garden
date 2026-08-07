@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { threadById, timeAgo, dayKey } from "./data.js";
 import { encryptText, decryptText } from "./crypto.js";
 
@@ -16,6 +16,10 @@ import LoginGate from "./components/LoginGate.jsx";
 import PublicPage from "./components/PublicPage.jsx";
 import GardenAnalysis from "./components/GardenAnalysis.jsx";
 
+function slugify(text) {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
 async function getSettings() {
   try {
     const raw = JSON.parse(localStorage.getItem("vsg_settings")) || {};
@@ -28,6 +32,18 @@ async function saveSettings(s) {
   const encApiKey = s.apiKey ? await encryptText(s.apiKey) : "";
   const encModel = s.model ? await encryptText(s.model) : "";
   localStorage.setItem("vsg_settings", JSON.stringify({ encApiKey, encModel }));
+}
+
+function parseHash() {
+  const hash = window.location.hash.slice(1) || "/";
+  const parts = hash.split("/").filter(Boolean);
+  if (parts[0] === "essay" && parts[1]) return { route: "essay", slug: parts[1] };
+  if (parts[0] === "bed" && parts[1]) return { route: "bed", id: parts[1] };
+  return { route: "garden" };
+}
+
+function setHash(route) {
+  window.location.hash = route;
 }
 
   const aiAnalyze = async (regions, settings) => {
@@ -60,6 +76,13 @@ export default function App() {
   const [aiInsight, setAiInsight] = useState(null);
   const aiRan = useRef(false);
 
+  const [hashRoute, setHashRoute] = useState(() => parseHash());
+  useEffect(() => {
+    const onHash = () => setHashRoute(parseHash());
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
     localStorage.setItem("vsg_dark", darkMode ? "1" : "0");
@@ -84,7 +107,8 @@ export default function App() {
 
   const [hover, setHover] = useState(null);
   const [selected, setSelected] = useState(null);
-  const [view, setView] = useState("garden");
+  const [selectedArticle, setSelectedArticle] = useState(null);
+  const [view, setViewState] = useState(() => hashRoute.route === "bed" ? "bed" : hashRoute.route === "essay" ? "library" : "garden");
   const [showLogin, setShowLogin] = useState(false);
   const [libraryArticles, setLibraryArticles] = useState(() => getAllArticles());
   const [clock, setClock] = useState(new Date());
@@ -96,6 +120,23 @@ export default function App() {
   useEffect(() => {
     if (view === "garden") setLibraryArticles(getAllArticles());
   }, [view]);
+
+  const setView = useCallback((v, opts = {}) => {
+    setViewState(v);
+    if (opts.navigate !== false) {
+      if (v === "garden") setHash("/");
+      else if (v === "library" && opts.articleSlug) setHash(`/essay/${opts.articleSlug}`);
+      else if (v === "bed" && opts.bedId) setHash(`/bed/${opts.bedId}`);
+      else setHash(`/${v}`);
+    }
+  }, []);
+
+  const navigateToArticle = useCallback((article) => {
+    const slug = slugify(article.title);
+    setHash(`/essay/${slug}`);
+    setSelectedArticle(article);
+    setViewState("library");
+  }, []);
 
   // Water: phase can be "picking-plant", "picking-fruit", or "logging"
   const [waterPhase, setWaterPhase] = useState("idle");
@@ -219,7 +260,7 @@ export default function App() {
     try { await api.deleteRegion(id); setRegions((rs) => rs.filter((r) => r.id !== id)); setSelected(null); setConfirmDelete(null); setView("garden"); } catch (e) { console.error(e); }
   };
 
-  const viewBedDetail = (id) => { setView("bed"); setSelected(id); };
+  const viewBedDetail = (id) => { setView("bed", { bedId: id }); setSelected(id); };
 
   const nextPlan = useMemo(() => {
     const now = new Date();
@@ -288,7 +329,7 @@ export default function App() {
             onSelect={viewBedDetail}
             onWater={openWater}
             onStartTimer={openPicker}
-            onSelectArticle={(id) => { setView("library"); }}
+            onSelectArticle={(article) => navigateToArticle(article)}
           />
         ) : view === "bed" && selected ? (
           <BedDetailPage
@@ -306,7 +347,7 @@ export default function App() {
         ) : view === "roadmap" ? (
           <RoadmapView regions={regions} onSelectBed={viewBedDetail} />
         ) : (
-          <Library regions={regions} />
+          <Library regions={regions} selectedId={selectedArticle?.id} onSelectArticle={navigateToArticle} />
         )}
       </main>
 
