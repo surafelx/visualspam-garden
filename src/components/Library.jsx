@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { articles as seedArticles, threadById, threads, timeAgo, dayKey, CROP_CHOICES } from "../data.js";
 
 const KINDS = ["All", "Essay", "Note", "Log", "Book"];
@@ -117,6 +117,7 @@ function ArticleForm({ onSave, onCancel, initial, regions = [] }) {
   const [regionId, setRegionId] = useState(initial?.regionId || "");
   const [plantId, setPlantId] = useState(initial?.plantId || "");
   const [fruitId, setFruitId] = useState(initial?.fruitId || "");
+  const [bgMusic, setBgMusic] = useState(initial?.bgMusic || "");
   const [blocks, setBlocks] = useState(() => {
     if (initial?.blocks?.length) return initial.blocks;
     if (initial?.body) {
@@ -125,6 +126,8 @@ function ArticleForm({ onSave, onCancel, initial, regions = [] }) {
     return [{ type: "text", content: "" }];
   });
   const bodyRef = useRef(null);
+  const bgAudioRef = useRef(null);
+  const [bgPlaying, setBgPlaying] = useState(false);
 
   const selectedRegion = regions.find((r) => r.id === regionId);
   const selectedPlant = selectedRegion?.plants?.find((p) => p.id === plantId);
@@ -169,6 +172,7 @@ function ArticleForm({ onSave, onCancel, initial, regions = [] }) {
       regionId: regionId || undefined,
       plantId: plantId || undefined,
       fruitId: fruitId || undefined,
+      bgMusic: bgMusic || undefined,
       minutes: mins,
       dateLabel: initial?.dateLabel || new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
       excerpt, body: bodyText, blocks,
@@ -233,6 +237,37 @@ function ArticleForm({ onSave, onCancel, initial, regions = [] }) {
           </div>
         )}
 
+        <div className="lf-meta-row">
+          <div className="lf-meta-group lf-meta-full">
+            <span className="lf-meta-label">🎵 Background Music</span>
+            <div className="lf-bgmusic-row">
+              <input
+                className="lf-block-url-input"
+                value={bgMusic}
+                onChange={(e) => setBgMusic(e.target.value)}
+                placeholder="Paste audio URL for background music (optional)"
+              />
+              {bgMusic && (
+                <button
+                  className={`lf-bgmusic-play ${bgPlaying ? "playing" : ""}`}
+                  onClick={() => {
+                    if (bgAudioRef.current) {
+                      if (bgPlaying) { bgAudioRef.current.pause(); }
+                      else { bgAudioRef.current.play(); }
+                      setBgPlaying(!bgPlaying);
+                    }
+                  }}
+                >
+                  {bgPlaying ? "⏸" : "▶"}
+                </button>
+              )}
+            </div>
+            {bgMusic && (
+              <audio ref={bgAudioRef} src={bgMusic} loop onEnded={() => setBgPlaying(false)} />
+            )}
+          </div>
+        </div>
+
         <div className="lf-blocks" ref={bodyRef}>
           {blocks.map((block, i) => (
             <div key={i} className="lf-block-wrap">
@@ -267,20 +302,45 @@ function ArticleForm({ onSave, onCancel, initial, regions = [] }) {
 function ArticleReader({ article, onBack, onEdit, onDelete, regions = [] }) {
   const t = threadById[article.thread];
   const blocks = getBlocks(article);
+  const bgAudioRef = useRef(null);
+  const [bgPlaying, setBgPlaying] = useState(false);
 
   const linkedRegion = article.regionId ? regions.find((r) => r.id === article.regionId) : null;
   const linkedPlant = linkedRegion && article.plantId ? linkedRegion.plants?.find((p) => p.id === article.plantId) : null;
   const linkedFruit = linkedPlant && article.fruitId ? (linkedPlant.fruits || []).find((f) => f.id === article.fruitId) : null;
+
+  useEffect(() => {
+    if (article.bgMusic && bgAudioRef.current) {
+      bgAudioRef.current.volume = 0.3;
+    }
+  }, [article.bgMusic]);
 
   return (
     <div className="library">
       <div className="lf-reader-bar">
         <button className="lf-back" onClick={onBack}>← Back</button>
         <div className="lf-reader-bar-actions">
+          {article.bgMusic && (
+            <button
+              className={`lf-btn lf-btn-ghost lf-bgmusic-btn ${bgPlaying ? "playing" : ""}`}
+              onClick={() => {
+                if (bgAudioRef.current) {
+                  if (bgPlaying) { bgAudioRef.current.pause(); }
+                  else { bgAudioRef.current.play(); }
+                  setBgPlaying(!bgPlaying);
+                }
+              }}
+            >
+              {bgPlaying ? "⏸ Music" : "▶ Music"}
+            </button>
+          )}
           <button className="lf-btn lf-btn-ghost" onClick={onEdit}>Edit</button>
           <button className="lf-btn lf-btn-danger" onClick={onDelete}>Delete</button>
         </div>
       </div>
+      {article.bgMusic && (
+        <audio ref={bgAudioRef} src={article.bgMusic} loop onEnded={() => setBgPlaying(false)} />
+      )}
       <article className="lf-reader">
         <div className="lf-reader-meta">
           <span className="lf-reader-dot" style={{ background: t?.color }} />
