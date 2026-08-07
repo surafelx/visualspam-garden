@@ -6,8 +6,7 @@ const FEED_ICON = { water: "💧", note: "✎", grow: "🌸", sun: "☀️", che
 import * as api from "./api.js";
 import GardenScene from "./components/GardenScene.jsx";
 import Library, { getAllArticles } from "./components/Library.jsx";
-import CalendarView from "./components/CalendarView.jsx";
-import DaySchedule from "./components/DaySchedule.jsx";
+import PlanView from "./components/PlanView.jsx";
 import DurationPicker from "./components/DurationPicker.jsx";
 import CountdownTimer from "./components/CountdownTimer.jsx";
 import BedForm from "./components/BedForm.jsx";
@@ -253,8 +252,7 @@ export default function App() {
 
   const NAV = [
     { id: "garden", icon: "🌱", label: "Garden" },
-    { id: "day", icon: "🕐", label: "Day plan" },
-    { id: "calendar", icon: "📅", label: "Timeline" },
+    { id: "plan", icon: "📋", label: "Plan" },
     { id: "roadmap", icon: "🎯", label: "Roadmap" },
     { id: "library", icon: "📖", label: "Library" },
   ];
@@ -304,10 +302,8 @@ export default function App() {
             onEditBed={(bed) => setBedForm(bed)}
             onDeleteBed={(id) => setConfirmDelete(id)}
           />
-        ) : view === "day" ? (
-          <DaySchedule regions={regions} />
-        ) : view === "calendar" ? (
-          <CalendarView regions={regions} view={view} />
+        ) : view === "plan" ? (
+          <PlanView regions={regions} onGrow={grow} />
         ) : view === "roadmap" ? (
           <RoadmapView regions={regions} onSelectBed={viewBedDetail} />
         ) : (
