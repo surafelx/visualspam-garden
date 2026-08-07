@@ -5,7 +5,7 @@ import { encryptText, decryptText } from "./crypto.js";
 const FEED_ICON = { water: "💧", note: "✎", grow: "🌸", sun: "☀️", checkin: "🌱" };
 import * as api from "./api.js";
 import GardenScene from "./components/GardenScene.jsx";
-import Library from "./components/Library.jsx";
+import Library, { getAllArticles } from "./components/Library.jsx";
 import CalendarView from "./components/CalendarView.jsx";
 import DaySchedule from "./components/DaySchedule.jsx";
 import DurationPicker from "./components/DurationPicker.jsx";
@@ -89,11 +89,16 @@ export default function App() {
   const [hover, setHover] = useState(null);
   const [selected, setSelected] = useState(null);
   const [view, setView] = useState("garden");
+  const [libraryArticles, setLibraryArticles] = useState(() => getAllArticles());
   const [clock, setClock] = useState(new Date());
   useEffect(() => {
     const id = setInterval(() => setClock(new Date()), 15000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (view === "garden") setLibraryArticles(getAllArticles());
+  }, [view]);
 
   // Water: phase can be "picking-plant", "picking-fruit", or "logging"
   const [waterPhase, setWaterPhase] = useState("idle");
@@ -243,7 +248,7 @@ export default function App() {
   }
 
   if (!admin) {
-    return <PublicPage onAdmin={handleAdminFromPublic} />;
+    return <PublicPage onAdmin={handleAdminFromPublic} regions={regions} articles={libraryArticles} />;
   }
 
   const NAV = [
@@ -278,6 +283,7 @@ export default function App() {
         {view === "garden" ? (
           <GardenScene
             regions={regions}
+            articles={libraryArticles}
             hover={hover}
             selected={editingTimerId ? null : selected}
             timerIds={timers.filter((t) => t.phase === "countdown").map((t) => t.regionId)}
@@ -291,6 +297,7 @@ export default function App() {
             aiInsight={aiInsight}
             onRefreshAI={() => { aiRan.current = false; aiAnalyze(regions, settings).then((t) => t && setAiInsight(t)); }}
             hasApiKey={!!settings.apiKey}
+            onSelectArticle={(id) => { setView("library"); }}
           />
         ) : view === "bed" && selected ? (
           <BedDetailPage

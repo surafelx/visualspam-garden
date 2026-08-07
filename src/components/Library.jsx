@@ -8,6 +8,18 @@ function loadCustom() {
 }
 function saveCustom(list) { localStorage.setItem("vsg_library", JSON.stringify(list)); }
 
+function loadDeleted() {
+  try { return JSON.parse(localStorage.getItem("vsg_library_deleted") || "[]"); } catch { return []; }
+}
+function saveDeleted(list) { localStorage.setItem("vsg_library_deleted", JSON.stringify(list)); }
+
+export function getAllArticles() {
+  const custom = loadCustom();
+  const deleted = loadDeleted();
+  const activeSeeds = seedArticles.filter((a) => !deleted.includes(a.id));
+  return [...custom, ...activeSeeds];
+}
+
 function ArticleForm({ onSave, onCancel, initial }) {
   const [title, setTitle] = useState(initial?.title || "");
   const [thread, setThread] = useState(initial?.thread || "philosophy");
@@ -114,12 +126,16 @@ function formatDate(dk) {
 
 export default function Library({ regions = [] }) {
   const [custom, setCustom] = useState(loadCustom);
+  const [deleted, setDeleted] = useState(loadDeleted);
   const [tab, setTab] = useState("entries");
   const [filter, setFilter] = useState("All");
   const [editing, setEditing] = useState(null);
   const [openId, setOpenId] = useState(null);
 
-  const allArticles = useMemo(() => [...custom, ...seedArticles], [custom]);
+  const allArticles = useMemo(() => {
+    const activeSeeds = seedArticles.filter((a) => !deleted.includes(a.id));
+    return [...custom, ...activeSeeds];
+  }, [custom, deleted]);
   const filtered = useMemo(() => filter === "All" ? allArticles : allArticles.filter((a) => a.kind === filter), [allArticles, filter]);
   const open = allArticles.find((a) => a.id === openId);
 
@@ -140,9 +156,15 @@ export default function Library({ regions = [] }) {
   };
 
   const handleDelete = (id) => {
-    const next = custom.filter((a) => a.id !== id);
-    setCustom(next);
-    saveCustom(next);
+    if (id.startsWith("custom_")) {
+      const next = custom.filter((a) => a.id !== id);
+      setCustom(next);
+      saveCustom(next);
+    } else {
+      const next = [...deleted, id];
+      setDeleted(next);
+      saveDeleted(next);
+    }
     if (openId === id) setOpenId(null);
   };
 
@@ -156,18 +178,15 @@ export default function Library({ regions = [] }) {
 
   if (openId && open) {
     const t = threadById[open.thread];
-    const isCustom = open.id.startsWith("custom_");
     return (
       <div className="library">
         <div className="lf-reader-bar">
           <button className="lf-back" onClick={() => setOpenId(null)}>← Back</button>
           <div className="lf-reader-bar-actions">
-            {isCustom && (
-              <>
-                <button className="lf-btn lf-btn-ghost" onClick={() => { setEditing(open); setOpenId(null); }}>Edit</button>
-                <button className="lf-btn lf-btn-danger" onClick={() => { handleDelete(open.id); setOpenId(null); }}>Delete</button>
-              </>
+            {open.id.startsWith("custom_") && (
+              <button className="lf-btn lf-btn-ghost" onClick={() => { setEditing(open); setOpenId(null); }}>Edit</button>
             )}
+            <button className="lf-btn lf-btn-danger" onClick={() => { handleDelete(open.id); setOpenId(null); }}>Delete</button>
           </div>
         </div>
         <article className="lf-reader">
@@ -220,7 +239,6 @@ export default function Library({ regions = [] }) {
             {filtered.length === 0 && <div className="lf-empty-state"><div className="lf-empty-icon">✍️</div><p>No entries yet. Start writing.</p></div>}
             {filtered.map((a) => {
               const t = threadById[a.thread];
-              const isCustom = a.id.startsWith("custom_");
               return (
                 <div key={a.id} className="lf-card-wrap">
                   <button className="lf-card" onClick={() => setOpenId(a.id)}>
@@ -240,12 +258,12 @@ export default function Library({ regions = [] }) {
                       </div>
                     </div>
                   </button>
-                  {isCustom && (
-                    <div className="lf-card-actions">
+                  <div className="lf-card-actions">
+                    {a.id.startsWith("custom_") && (
                       <button className="lf-card-action" onClick={(e) => { e.stopPropagation(); setEditing(a); setOpenId(null); }}>Edit</button>
-                      <button className="lf-card-action lf-card-action-del" onClick={(e) => { e.stopPropagation(); handleDelete(a.id); }}>Delete</button>
-                    </div>
-                  )}
+                    )}
+                    <button className="lf-card-action lf-card-action-del" onClick={(e) => { e.stopPropagation(); handleDelete(a.id); }}>Delete</button>
+                  </div>
                 </div>
               );
             })}

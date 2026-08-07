@@ -46,7 +46,7 @@ function BedCard({ region, onSelect, onStartTimer, onWater, hasTimer }) {
   );
 }
 
-export default function GardenScene({ regions, hover, selected, timerIds = [], onHover, onSelect, onWater, onStartTimer, onAnalyze, aiInsight, onRefreshAI, hasApiKey }) {
+export default function GardenScene({ regions, articles = [], hover, selected, timerIds = [], onHover, onSelect, onWater, onStartTimer, onAnalyze, aiInsight, onRefreshAI, hasApiKey, onSelectArticle }) {
   const thirstyCount = regions.filter((r) => needsWater(r.lastTs)).length;
   const totalSun = regions.reduce((n, r) => n + (r.sunshine || 0), 0);
   const totalTended = regions.reduce((n, r) => n + r.tended, 0);
@@ -116,6 +116,36 @@ export default function GardenScene({ regions, hover, selected, timerIds = [], o
           <BedCard key={r.id} region={r} onSelect={onSelect} onStartTimer={onStartTimer} onWater={onWater} hasTimer={timerIds.includes(r.id)} />
         ))}
       </div>
+
+      {articles.length > 0 && (
+        <div className="g-entries-section">
+          <div className="g-entries-head">
+            <h2 className="g-entries-title">Recent Entries</h2>
+            <button className="g-entries-viewall" onClick={onSelectArticle}>View all →</button>
+          </div>
+          <div className="g-entries-grid">
+            {articles.slice(0, 4).map((a) => {
+              const t = threadById[a.thread];
+              return (
+                <button key={a.id} className="g-entry-card" onClick={onSelectArticle}>
+                  <div className="g-entry-accent" style={{ background: t?.color }} />
+                  <div className="g-entry-body">
+                    <span className="g-entry-kind">{a.kind}</span>
+                    <h3 className="g-entry-title">{a.title}</h3>
+                    <p className="g-entry-excerpt">{a.excerpt}</p>
+                    <div className="g-entry-foot">
+                      <span className="g-entry-dot" style={{ background: t?.color }} />
+                      <span>{t?.name}</span>
+                      <span className="g-entry-sep">·</span>
+                      <span>{a.minutes} min</span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </section>
   );
 }
