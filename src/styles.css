@@ -1013,6 +1013,10 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 }
 
 .roadmap-empty { padding: 40px 20px; text-align: center; color: #bcb4a1; font-size: 0.85rem; }
+.roadmap-empty-wrap { text-align: center; padding: 60px 20px; }
+.roadmap-empty-icon { font-size: 2.5rem; margin-bottom: 12px; opacity: 0.4; }
+.roadmap-empty-wrap p { color: #8a7e6b; font-size: 0.9rem; margin: 4px 0; }
+.roadmap-empty-sub { color: #bcb4a1 !important; font-size: 0.8rem !important; }
 
 .roadmap-legend {
   max-width: 800px; margin: 16px auto 0; display: flex; gap: 16px;
@@ -1038,6 +1042,17 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
   cursor: pointer; transition: all 0.12s;
 }
 .g-ai-refresh:hover { border-color: #4c9a63; color: #4c9a63; }
+
+/* ── due fruit alerts on garden ── */
+.g-due-alerts { display: flex; flex-direction: column; gap: 6px; margin-top: 20px; }
+.g-due-alert {
+  display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+  border-radius: 10px; font-size: 0.8rem; line-height: 1.4;
+}
+.g-due-overdue { background: rgba(192,57,43,0.08); border: 1px solid rgba(192,57,43,0.15); color: #8a3030; }
+.g-due-soon { background: rgba(224,168,74,0.08); border: 1px solid rgba(224,168,74,0.15); color: #6b5a30; }
+.g-due-icon { font-size: 1rem; flex: 0 0 auto; }
+.g-due-text { flex: 1; }
 
 /* ── recent entries section on garden ── */
 .g-entries-section {
@@ -1518,6 +1533,23 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 .lf-kchip:hover { border-color: #c5bfb0; }
 .lf-kchip.on { background: #1a1814; border-color: #1a1814; color: #f0ede6; }
 
+.lf-select-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.lf-select {
+  padding: 6px 10px; border-radius: 8px; border: 1px solid #e2ddd4; background: #fff;
+  font-family: inherit; font-size: 0.78rem; color: #33302a; cursor: pointer;
+  min-width: 120px; outline: none; transition: border-color 0.12s;
+}
+.lf-select:focus { border-color: #a09888; }
+
+.lf-reader-links {
+  display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0;
+}
+.lf-reader-link {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 8px; font-size: 0.75rem;
+  background: #f0ede6; color: #5a5245; font-weight: 500;
+}
+
 .lf-body-input {
   flex: 1; width: 100%; padding: 0; border: none; background: none; resize: none;
   font-family: var(--serif); font-size: 1.05rem; line-height: 1.8;
@@ -1968,6 +2000,12 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 [data-theme="dark"] .lf-kchip { background: var(--bg-card); border-color: var(--border); color: var(--text-dim); }
 [data-theme="dark"] .lf-kchip:hover { border-color: var(--border-light); }
 [data-theme="dark"] .lf-kchip.on { background: var(--text); border-color: var(--text); color: var(--bg); }
+[data-theme="dark"] .lf-select { background: var(--bg-card); border-color: var(--border); color: var(--text); }
+[data-theme="dark"] .lf-select:focus { border-color: var(--border-light); }
+[data-theme="dark"] .lf-reader-link { background: var(--bg-card); color: var(--text-dim); }
+[data-theme="dark"] .g-due-overdue { background: rgba(192,57,43,0.12); border-color: rgba(192,57,43,0.2); color: #f0a0a0; }
+[data-theme="dark"] .g-due-soon { background: rgba(224,168,74,0.12); border-color: rgba(224,168,74,0.2); color: #f0d090; }
+[data-theme="dark"] .roadmap-empty-icon { color: var(--text-muted); }
 [data-theme="dark"] .lf-body-input { color: var(--text-dim); }
 [data-theme="dark"] .lf-body-input::placeholder { color: var(--text-muted); }
 [data-theme="dark"] .lf-block { background: var(--bg-card); border-color: var(--border); }

@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from "react";
-import { articles as seedArticles, threadById, threads, timeAgo, dayKey } from "../data.js";
+import { articles as seedArticles, threadById, threads, timeAgo, dayKey, CROP_CHOICES } from "../data.js";
 
 const KINDS = ["All", "Essay", "Note", "Log", "Book"];
 
@@ -110,10 +110,13 @@ function BlockEditor({ block, onChange, onRemove }) {
   return null;
 }
 
-function ArticleForm({ onSave, onCancel, initial }) {
+function ArticleForm({ onSave, onCancel, initial, regions = [] }) {
   const [title, setTitle] = useState(initial?.title || "");
   const [thread, setThread] = useState(initial?.thread || "philosophy");
   const [kind, setKind] = useState(initial?.kind || "Essay");
+  const [regionId, setRegionId] = useState(initial?.regionId || "");
+  const [plantId, setPlantId] = useState(initial?.plantId || "");
+  const [fruitId, setFruitId] = useState(initial?.fruitId || "");
   const [blocks, setBlocks] = useState(() => {
     if (initial?.blocks?.length) return initial.blocks;
     if (initial?.body) {
@@ -122,6 +125,10 @@ function ArticleForm({ onSave, onCancel, initial }) {
     return [{ type: "text", content: "" }];
   });
   const bodyRef = useRef(null);
+
+  const selectedRegion = regions.find((r) => r.id === regionId);
+  const selectedPlant = selectedRegion?.plants?.find((p) => p.id === plantId);
+  const fruits = selectedPlant?.fruits || [];
 
   const addBlock = (type) => {
     setBlocks((prev) => [...prev, { type, content: "", url: "", caption: "" }]);
@@ -159,6 +166,9 @@ function ArticleForm({ onSave, onCancel, initial }) {
       id: initial?.id || `custom_${Date.now()}`,
       title: title.trim(),
       thread, kind,
+      regionId: regionId || undefined,
+      plantId: plantId || undefined,
+      fruitId: fruitId || undefined,
       minutes: mins,
       dateLabel: initial?.dateLabel || new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
       excerpt, body: bodyText, blocks,
@@ -197,6 +207,32 @@ function ArticleForm({ onSave, onCancel, initial }) {
           </div>
         </div>
 
+        {regions.length > 0 && (
+          <div className="lf-meta-row">
+            <div className="lf-meta-group">
+              <span className="lf-meta-label">Bed</span>
+              <div className="lf-select-row">
+                <select className="lf-select" value={regionId} onChange={(e) => { setRegionId(e.target.value); setPlantId(""); setFruitId(""); }}>
+                  <option value="">None</option>
+                  {regions.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
+                </select>
+                {selectedRegion && (
+                  <select className="lf-select" value={plantId} onChange={(e) => { setPlantId(e.target.value); setFruitId(""); }}>
+                    <option value="">All plants</option>
+                    {(selectedRegion.plants || []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                )}
+                {selectedPlant && fruits.length > 0 && (
+                  <select className="lf-select" value={fruitId} onChange={(e) => setFruitId(e.target.value)}>
+                    <option value="">All fruits</option>
+                    {fruits.map((f) => <option key={f.id} value={f.id}>{f.title}</option>)}
+                  </select>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="lf-blocks" ref={bodyRef}>
           {blocks.map((block, i) => (
             <div key={i} className="lf-block-wrap">
@@ -228,9 +264,13 @@ function ArticleForm({ onSave, onCancel, initial }) {
   );
 }
 
-function ArticleReader({ article, onBack, onEdit, onDelete }) {
+function ArticleReader({ article, onBack, onEdit, onDelete, regions = [] }) {
   const t = threadById[article.thread];
   const blocks = getBlocks(article);
+
+  const linkedRegion = article.regionId ? regions.find((r) => r.id === article.regionId) : null;
+  const linkedPlant = linkedRegion && article.plantId ? linkedRegion.plants?.find((p) => p.id === article.plantId) : null;
+  const linkedFruit = linkedPlant && article.fruitId ? (linkedPlant.fruits || []).find((f) => f.id === article.fruitId) : null;
 
   return (
     <div className="library">
@@ -253,6 +293,13 @@ function ArticleReader({ article, onBack, onEdit, onDelete }) {
           <span className="lf-reader-date">{article.dateLabel}</span>
         </div>
         <h1 className="lf-reader-title">{article.title}</h1>
+        {(linkedRegion || linkedPlant || linkedFruit) && (
+          <div className="lf-reader-links">
+            {linkedRegion && <span className="lf-reader-link">🌱 {linkedRegion.label}</span>}
+            {linkedPlant && <span className="lf-reader-link">🌿 {linkedPlant.name}</span>}
+            {linkedFruit && <span className="lf-reader-link">🍊 {linkedFruit.title}</span>}
+          </div>
+        )}
         <div className="lf-reader-body">
           {blocks.map((block, i) => {
             if (block.type === "text") return <p key={i}>{block.content}</p>;
@@ -392,7 +439,7 @@ export default function Library({ regions = [] }) {
   if (tab === "editor" || editing) {
     return (
       <div className="library">
-        <ArticleForm onSave={handleSave} onCancel={() => setEditing(null)} initial={editing} />
+        <ArticleForm onSave={handleSave} onCancel={() => setEditing(null)} initial={editing} regions={regions} />
       </div>
     );
   }
@@ -404,6 +451,7 @@ export default function Library({ regions = [] }) {
         onBack={() => setOpenId(null)}
         onEdit={() => { setEditing(open); setOpenId(null); }}
         onDelete={() => setConfirmDelete(openId)}
+        regions={regions}
       />
     );
   }
@@ -438,6 +486,9 @@ export default function Library({ regions = [] }) {
             {filtered.length === 0 && <div className="lf-empty-state"><div className="lf-empty-icon">✍️</div><p>No entries yet. Start writing.</p></div>}
             {filtered.map((a) => {
               const t = threadById[a.thread];
+              const aRegion = a.regionId ? regions.find((r) => r.id === a.regionId) : null;
+              const aPlant = aRegion && a.plantId ? aRegion.plants?.find((p) => p.id === a.plantId) : null;
+              const aFruit = aPlant && a.fruitId ? (aPlant.fruits || []).find((f) => f.id === a.fruitId) : null;
               return (
                 <div key={a.id} className="lf-card-wrap">
                   <button className="lf-card" onClick={() => setOpenId(a.id)}>
@@ -451,6 +502,9 @@ export default function Library({ regions = [] }) {
                       <div className="lf-card-foot">
                         <span className="lf-card-dot" style={{ background: t?.color }} />
                         <span>{t?.name}</span>
+                        {aRegion && <><span className="lf-card-sep">·</span><span>🌱 {aRegion.label}</span></>}
+                        {aPlant && <><span className="lf-card-sep">·</span><span>🌿 {aPlant.name}</span></>}
+                        {aFruit && <><span className="lf-card-sep">·</span><span>🍊 {aFruit.title}</span></>}
                         <span className="lf-card-sep">·</span>
                         <span>{a.minutes} min</span>
                       </div>

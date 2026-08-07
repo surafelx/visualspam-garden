@@ -2,6 +2,25 @@ import { useState, useEffect } from "react";
 import { threadById, timeAgo, needsWater } from "../data.js";
 import { PixelSprite } from "../pixels.jsx";
 
+const DAY_MS = 864e5;
+
+function getDueFruits(regions) {
+  const now = Date.now();
+  const items = [];
+  for (const r of regions) {
+    for (const p of r.plants || []) {
+      for (const f of p.fruits || []) {
+        if (!f.deadline || f.done) continue;
+        const dl = new Date(f.deadline).getTime();
+        const diff = dl - now;
+        if (diff < 0) items.push({ id: f.id, title: f.title || "Untitled", bed: r.label, bedId: r.id, type: "overdue" });
+        else if (diff < 3 * DAY_MS) items.push({ id: f.id, title: f.title || "Untitled", bed: r.label, bedId: r.id, type: "soon" });
+      }
+    }
+  }
+  return items;
+}
+
 function BedCard({ region, onSelect, onStartTimer, onWater, hasTimer }) {
   const t = threadById[region.thread];
   const thirsty = needsWater(region.lastTs);
@@ -55,6 +74,10 @@ export default function GardenScene({ regions, articles = [], hover, selected, t
   const totalFruits = regions.reduce((n, r) => {
     return n + (r.plants || []).reduce((s, p) => s + (p.fruits || []).filter((f) => !f.done).length, 0);
   }, 0);
+
+  const dueFruits = getDueFruits(regions);
+  const overdue = dueFruits.filter((f) => f.type === "overdue");
+  const dueSoon = dueFruits.filter((f) => f.type === "soon");
 
   const [clock, setClock] = useState(new Date());
   useEffect(() => { const id = setInterval(() => setClock(new Date()), 1000); return () => clearInterval(id); }, []);
@@ -110,6 +133,27 @@ export default function GardenScene({ regions, articles = [], hover, selected, t
           <span className="g-ai-text">AI insights — set your OpenRouter API key in ⚙ Settings to activate</span>
         )}
       </div>
+
+      {(overdue.length > 0 || dueSoon.length > 0) && (
+        <div className="g-due-alerts">
+          {overdue.length > 0 && (
+            <div className="g-due-alert g-due-overdue">
+              <span className="g-due-icon">⚠</span>
+              <span className="g-due-text">
+                {overdue.length} overdue: {overdue.map((f) => `${f.title} · ${f.bed}`).join(", ")}
+              </span>
+            </div>
+          )}
+          {dueSoon.length > 0 && (
+            <div className="g-due-alert g-due-soon">
+              <span className="g-due-icon">⏰</span>
+              <span className="g-due-text">
+                {dueSoon.length} due soon: {dueSoon.map((f) => `${f.title} · ${f.bed}`).join(", ")}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="g-grid">
         {regions.map((r) => (
