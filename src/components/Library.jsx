@@ -25,6 +25,11 @@ export function getAllArticles() {
   return [...custom, ...activeSeeds];
 }
 
+export function getPublicArticles() {
+  const custom = loadCustom();
+  return [...custom, ...seedArticles];
+}
+
 function slugify(text) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }

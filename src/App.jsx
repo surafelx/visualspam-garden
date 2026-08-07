@@ -5,7 +5,7 @@ import { encryptText, decryptText } from "./crypto.js";
 const FEED_ICON = { water: "💧", note: "✎", grow: "🌸", sun: "☀️", checkin: "🌱" };
 import * as api from "./api.js";
 import GardenScene from "./components/GardenScene.jsx";
-import Library, { getAllArticles } from "./components/Library.jsx";
+import Library, { getAllArticles, getPublicArticles } from "./components/Library.jsx";
 import PlanView from "./components/PlanView.jsx";
 import DurationPicker from "./components/DurationPicker.jsx";
 import CountdownTimer from "./components/CountdownTimer.jsx";
@@ -111,6 +111,7 @@ export default function App() {
   const [view, setViewState] = useState(() => hashRoute.route === "bed" ? "bed" : hashRoute.route === "essay" ? "library" : "garden");
   const [showLogin, setShowLogin] = useState(false);
   const [libraryArticles, setLibraryArticles] = useState(() => getAllArticles());
+  const [publicArticles, setPublicArticles] = useState(() => getPublicArticles());
   const [clock, setClock] = useState(new Date());
   useEffect(() => {
     const id = setInterval(() => setClock(new Date()), 15000);
@@ -119,10 +120,14 @@ export default function App() {
 
   useEffect(() => {
     setLibraryArticles(getAllArticles());
+    setPublicArticles(getPublicArticles());
   }, []);
 
   useEffect(() => {
-    if (view === "garden") setLibraryArticles(getAllArticles());
+    if (view === "garden") {
+      setLibraryArticles(getAllArticles());
+      setPublicArticles(getPublicArticles());
+    }
   }, [view]);
 
   const setView = useCallback((v, opts = {}) => {
@@ -295,8 +300,8 @@ export default function App() {
       <PublicPage
         onLogin={() => setShowLogin(true)}
         regions={regions}
-        articles={libraryArticles}
-        selectedId={hashRoute.route === "essay" ? libraryArticles.find((a) => slugify(a.title) === hashRoute.slug)?.id : null}
+        articles={publicArticles}
+        selectedId={hashRoute.route === "essay" ? publicArticles.find((a) => slugify(a.title) === hashRoute.slug)?.id : null}
         onSelectArticle={(article) => {
           if (article) setHash(`/essay/${slugify(article.title)}`);
           else setHash("/");
