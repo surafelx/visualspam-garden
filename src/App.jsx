@@ -291,12 +291,6 @@ export default function App() {
             onSelect={viewBedDetail}
             onWater={openWater}
             onStartTimer={openPicker}
-            onEditBed={(bed) => setBedForm(bed)}
-            onDeleteBed={(id) => setConfirmDelete(id)}
-            onAnalyze={() => setShowAnalysis(true)}
-            aiInsight={aiInsight}
-            onRefreshAI={() => { aiRan.current = false; aiAnalyze(regions, settings).then((t) => t && setAiInsight(t)); }}
-            hasApiKey={!!settings.apiKey}
             onSelectArticle={(id) => { setView("library"); }}
           />
         ) : view === "bed" && selected ? (
