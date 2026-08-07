@@ -287,7 +287,18 @@ export default function App() {
 
   if (!admin) {
     if (showLogin) return <LoginGate onLogin={handleLogin} />;
-    return <PublicPage onLogin={() => setShowLogin(true)} regions={regions} articles={libraryArticles} />;
+    return (
+      <PublicPage
+        onLogin={() => setShowLogin(true)}
+        regions={regions}
+        articles={libraryArticles}
+        selectedId={hashRoute.route === "essay" ? libraryArticles.find((a) => slugify(a.title) === hashRoute.slug)?.id : null}
+        onSelectArticle={(article) => {
+          if (article) setHash(`/essay/${slugify(article.title)}`);
+          else setHash("/");
+        }}
+      />
+    );
   }
 
   const NAV = [
