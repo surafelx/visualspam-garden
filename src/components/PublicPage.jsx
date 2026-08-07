@@ -1,28 +1,14 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { threadById } from "../data.js";
 
 export default function PublicPage({ onLogin, regions = [], articles = [] }) {
-  const [selectedThread, setSelectedThread] = useState(null);
-
-  const activeArticles = useMemo(() => {
-    if (!selectedThread) return articles;
-    return articles.filter((a) => a.thread === selectedThread);
-  }, [articles, selectedThread]);
-
-  const bedThreads = useMemo(() => {
-    const map = {};
-    regions.forEach((r) => {
-      if (!map[r.thread]) map[r.thread] = { thread: r.thread, beds: 0, label: threadById[r.thread]?.label || r.thread };
-      map[r.thread].beds++;
-    });
-    return Object.values(map);
-  }, [regions]);
-
-  const selectedInfo = selectedThread ? threadById[selectedThread] : null;
+  const [openId, setOpenId] = useState(null);
+  const open = openId ? articles.find((a) => a.id === openId) : null;
 
   return (
     <div className="lp">
-      <div className="lp-texture" />
+      <div className="lp-border lp-border-left" />
+      <div className="lp-border lp-border-right" />
 
       <header className="lp-header">
         <div className="lp-header-inner">
@@ -34,68 +20,48 @@ export default function PublicPage({ onLogin, regions = [], articles = [] }) {
       </header>
 
       <main className="lp-main">
-        <section className="lp-hero">
-          <h1 className="lp-hero-title">A place for growing ideas</h1>
-          <p className="lp-hero-sub">Tending thoughts, and reading what matters.</p>
-        </section>
-
-        {bedThreads.length > 0 && (
-          <section className="lp-section">
-            <h2 className="lp-section-title">Beds</h2>
-            <div className="lp-beds-grid">
-              {bedThreads.map((bt) => {
-                const t = threadById[bt.thread];
-                return (
-                  <button
-                    key={bt.thread}
-                    className={`lp-bed-btn ${selectedThread === bt.thread ? "on" : ""}`}
-                    onClick={() => setSelectedThread(selectedThread === bt.thread ? null : bt.thread)}
-                  >
-                    <span className="lp-bed-icon">{t?.icon}</span>
-                    <span className="lp-bed-name">{t?.name}</span>
-                    <span className="lp-bed-meta">{bt.beds} bed{bt.beds > 1 ? "s" : ""}</span>
-                  </button>
-                );
-              })}
-            </div>
-            {selectedThread && (
-              <button className="lp-clear-filter" onClick={() => setSelectedThread(null)}>
-                Show all
-              </button>
-            )}
-          </section>
-        )}
-
-        {activeArticles.length > 0 && (
-          <section className="lp-section">
-            <h2 className="lp-section-title">
-              {selectedInfo ? `${selectedInfo.icon} ${selectedInfo.name} Essays` : "Essays & Notes"}
-            </h2>
-            <div className="lp-articles">
-              {activeArticles.map((a) => (
-                <div key={a.id} className="lp-article-card">
-                  <div className="lp-article-body">
-                    <div className="lp-article-meta">
-                      <span className="lp-article-kind">{a.kind}</span>
-                      <span className="lp-article-dot">·</span>
-                      <span>{a.minutes} min</span>
-                      <span className="lp-article-dot">·</span>
-                      <span>{a.dateLabel}</span>
-                    </div>
-                    <h3 className="lp-article-title">{a.title}</h3>
-                    <p className="lp-article-excerpt">{a.excerpt}</p>
-                  </div>
-                </div>
+        {open ? (
+          <div className="lp-reader">
+            <button className="lp-reader-back" onClick={() => setOpenId(null)}>← back</button>
+            <article className="lp-reader-article">
+              <div className="lp-reader-meta">
+                <span className="lp-reader-dot" style={{ background: threadById[open.thread]?.color }} />
+                <span>{threadById[open.thread]?.name}</span>
+                <span className="lp-sep">·</span>
+                <span>{open.kind}</span>
+                <span className="lp-sep">·</span>
+                <span>{open.minutes} min</span>
+                <span className="lp-sep">·</span>
+                <span>{open.dateLabel}</span>
+              </div>
+              <h1 className="lp-reader-title">{open.title}</h1>
+              <div className="lp-reader-body">
+                {open.body.split("\n\n").map((p, i) => {
+                  const lines = p.split("\n");
+                  return <p key={i}>{lines.map((line, li) => <span key={li}>{li > 0 && <br />}{line}</span>)}</p>;
+                })}
+              </div>
+              <button className="lp-reader-login" onClick={onLogin}>Sign in to write →</button>
+            </article>
+          </div>
+        ) : (
+          <div className="lp-list">
+            <h1 className="lp-list-title">Writing</h1>
+            <div className="lp-list-items">
+              {articles.length === 0 && (
+                <p className="lp-list-empty">No essays yet.</p>
+              )}
+              {articles.map((a) => (
+                <button key={a.id} className="lp-list-item" onClick={() => setOpenId(a.id)}>
+                  <span className="lp-list-item-title">{a.title}</span>
+                  <span className="lp-list-item-meta">
+                    <span className="lp-list-item-dot" style={{ background: threadById[a.thread]?.color }} />
+                    {threadById[a.thread]?.name} · {a.minutes} min · {a.dateLabel}
+                  </span>
+                </button>
               ))}
             </div>
-          </section>
-        )}
-
-        {regions.length === 0 && articles.length === 0 && (
-          <section className="lp-empty">
-            <div className="lp-empty-icon">🌿</div>
-            <p>The garden is quiet. No beds or essays yet.</p>
-          </section>
+          </div>
         )}
       </main>
     </div>
