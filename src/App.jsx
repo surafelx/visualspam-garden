@@ -67,9 +67,6 @@ export default function App() {
 
   const handleLogin = () => setAdmin(true);
   const handleLogout = () => { localStorage.removeItem("vsg_admin"); setAdmin(false); };
-  const handleAdminFromPublic = () => {
-    if (!admin) { localStorage.setItem("vsg_admin", "1"); setAdmin(true); }
-  };
 
   useEffect(() => {
     api.fetchRegions()
@@ -88,6 +85,7 @@ export default function App() {
   const [hover, setHover] = useState(null);
   const [selected, setSelected] = useState(null);
   const [view, setView] = useState("garden");
+  const [showLogin, setShowLogin] = useState(false);
   const [libraryArticles, setLibraryArticles] = useState(() => getAllArticles());
   const [clock, setClock] = useState(new Date());
   useEffect(() => {
@@ -247,7 +245,8 @@ export default function App() {
   }
 
   if (!admin) {
-    return <PublicPage onAdmin={handleAdminFromPublic} regions={regions} articles={libraryArticles} />;
+    if (showLogin) return <LoginGate onLogin={handleLogin} />;
+    return <PublicPage onLogin={() => setShowLogin(true)} regions={regions} articles={libraryArticles} />;
   }
 
   const NAV = [

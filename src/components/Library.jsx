@@ -302,7 +302,10 @@ function ArticleReader({ article, onBack, onEdit, onDelete, regions = [] }) {
         )}
         <div className="lf-reader-body">
           {blocks.map((block, i) => {
-            if (block.type === "text") return <p key={i}>{block.content}</p>;
+            if (block.type === "text") {
+              const lines = block.content.split("\n");
+              return <p key={i}>{lines.map((line, li) => <span key={li}>{li > 0 && <br />}{line}</span>)}</p>;
+            }
             if (block.type === "h2") return <h2 key={i}>{block.content}</h2>;
             if (block.type === "h3") return <h3 key={i}>{block.content}</h3>;
             if (block.type === "image") return (

@@ -1277,6 +1277,14 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 .login-btn:hover { background: #7cd488; }
 .login-err { font-size: 0.75rem; color: #c05050; margin-top: 8px; }
 
+[data-theme="dark"] .login-page { background: var(--bg); }
+[data-theme="dark"] .login-card { background: var(--bg-card); border-color: var(--border); }
+[data-theme="dark"] .login-title { color: var(--text); }
+[data-theme="dark"] .login-sub { color: var(--text-muted); }
+[data-theme="dark"] .login-input { background: var(--bg); border-color: var(--border); color: var(--text); }
+[data-theme="dark"] .login-input::placeholder { color: var(--text-muted); }
+[data-theme="dark"] .login-input:focus { border-color: var(--accent); }
+
 /* ═══════════════════════════════════════════════════════════════════════ */
 /*  PUBLIC LANDING PAGE                                                   */
 /* ═══════════════════════════════════════════════════════════════════════ */
@@ -1303,7 +1311,11 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 .lp-header { position: sticky; top: 0; z-index: 10; background: rgba(80,130,55,0.92); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.08); }
 .lp-header-inner { max-width: 720px; margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
 .lp-brand { display: flex; align-items: center; gap: 8px; }
-.lp-brand-icon { font-size: 1.3rem; }
+.lp-brand-icon {
+  font-size: 1.3rem; cursor: pointer; background: none; border: none; padding: 0;
+  transition: opacity 0.2s; opacity: 0.85;
+}
+.lp-brand-icon:hover { opacity: 1; }
 .lp-brand-name { font-weight: 600; font-size: 1rem; letter-spacing: -0.01em; }
 .lp-admin-btn {
   font-size: 0.68rem; color: rgba(255,255,255,0.4); background: none; border: none; cursor: pointer;

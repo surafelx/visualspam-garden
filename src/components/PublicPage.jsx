@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
-import { threadById, threads } from "../data.js";
+import { threadById } from "../data.js";
 
-export default function PublicPage({ onAdmin, regions = [], articles = [] }) {
+export default function PublicPage({ onLogin, regions = [], articles = [] }) {
   const [selectedThread, setSelectedThread] = useState(null);
 
   const activeArticles = useMemo(() => {
@@ -27,10 +27,9 @@ export default function PublicPage({ onAdmin, regions = [], articles = [] }) {
       <header className="lp-header">
         <div className="lp-header-inner">
           <div className="lp-brand">
-            <span className="lp-brand-icon">🌱</span>
+            <button className="lp-brand-icon" onClick={onLogin} title="garden">🌱</button>
             <span className="lp-brand-name">VisualSpam Garden</span>
           </div>
-          <button className="lp-admin-btn" onClick={onAdmin}>admin</button>
         </div>
       </header>
 
@@ -73,24 +72,21 @@ export default function PublicPage({ onAdmin, regions = [], articles = [] }) {
               {selectedInfo ? `${selectedInfo.icon} ${selectedInfo.name} Essays` : "Essays & Notes"}
             </h2>
             <div className="lp-articles">
-              {activeArticles.map((a) => {
-                const t = threadById[a.thread];
-                return (
-                  <div key={a.id} className="lp-article-card">
-                    <div className="lp-article-body">
-                      <div className="lp-article-meta">
-                        <span className="lp-article-kind">{a.kind}</span>
-                        <span className="lp-article-dot">·</span>
-                        <span>{a.minutes} min</span>
-                        <span className="lp-article-dot">·</span>
-                        <span>{a.dateLabel}</span>
-                      </div>
-                      <h3 className="lp-article-title">{a.title}</h3>
-                      <p className="lp-article-excerpt">{a.excerpt}</p>
+              {activeArticles.map((a) => (
+                <div key={a.id} className="lp-article-card">
+                  <div className="lp-article-body">
+                    <div className="lp-article-meta">
+                      <span className="lp-article-kind">{a.kind}</span>
+                      <span className="lp-article-dot">·</span>
+                      <span>{a.minutes} min</span>
+                      <span className="lp-article-dot">·</span>
+                      <span>{a.dateLabel}</span>
                     </div>
+                    <h3 className="lp-article-title">{a.title}</h3>
+                    <p className="lp-article-excerpt">{a.excerpt}</p>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           </section>
         )}
