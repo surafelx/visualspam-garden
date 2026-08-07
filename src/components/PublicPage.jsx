@@ -84,7 +84,6 @@ export default function PublicPage({ onAdmin, regions = [], articles = [] }) {
                 const t = threadById[a.thread];
                 return (
                   <div key={a.id} className="lp-article-card">
-                    <div className="lp-article-accent" style={{ background: t?.color }} />
                     <div className="lp-article-body">
                       <div className="lp-article-meta">
                         <span className="lp-article-kind">{a.kind}</span>

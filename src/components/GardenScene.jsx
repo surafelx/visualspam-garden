@@ -128,7 +128,6 @@ export default function GardenScene({ regions, articles = [], hover, selected, t
               const t = threadById[a.thread];
               return (
                 <button key={a.id} className="g-entry-card" onClick={onSelectArticle}>
-                  <div className="g-entry-accent" style={{ background: t?.color }} />
                   <div className="g-entry-body">
                     <span className="g-entry-kind">{a.kind}</span>
                     <h3 className="g-entry-title">{a.title}</h3>

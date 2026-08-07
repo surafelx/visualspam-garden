@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { articles as seedArticles, threadById, threads, timeAgo, dayKey } from "../data.js";
 
 const KINDS = ["All", "Essay", "Note", "Log", "Book"];
@@ -20,23 +20,148 @@ export function getAllArticles() {
   return [...custom, ...activeSeeds];
 }
 
+function getBlocks(article) {
+  if (article.blocks && article.blocks.length > 0) return article.blocks;
+  if (article.body) {
+    return article.body.split("\n\n").filter(Boolean).map((p) => ({ type: "text", content: p }));
+  }
+  return [];
+}
+
+const BLOCK_TYPES = [
+  { type: "text", label: "Paragraph", icon: "¶" },
+  { type: "h2", label: "Heading", icon: "H2" },
+  { type: "h3", label: "Subheading", icon: "H3" },
+  { type: "image", label: "Image", icon: "🖼" },
+  { type: "audio", label: "Audio", icon: "🎵" },
+  { type: "video", label: "Video", icon: "🎬" },
+];
+
+function BlockEditor({ block, onChange, onRemove }) {
+  const update = (patch) => onChange({ ...block, ...patch });
+
+  if (block.type === "text" || block.type === "h2" || block.type === "h3") {
+    const Tag = block.type === "text" ? "textarea" : "input";
+    return (
+      <div className={`lf-block lf-block-${block.type}`}>
+        <div className="lf-block-toolbar">
+          <span className="lf-block-type">{BLOCK_TYPES.find((b) => b.type === block.type)?.icon}</span>
+          <button className="lf-block-remove" onClick={onRemove} title="Remove block">✕</button>
+        </div>
+        <Tag
+          className={block.type === "text" ? "lf-block-textarea" : "lf-block-heading-input"}
+          value={block.content || ""}
+          onChange={(e) => update({ content: e.target.value })}
+          placeholder={block.type === "text" ? "Write..." : block.type === "h2" ? "Heading" : "Subheading"}
+          rows={block.type === "text" ? 3 : 1}
+        />
+      </div>
+    );
+  }
+
+  if (block.type === "image" || block.type === "audio" || block.type === "video") {
+    return (
+      <div className={`lf-block lf-block-${block.type}`}>
+        <div className="lf-block-toolbar">
+          <span className="lf-block-type">{BLOCK_TYPES.find((b) => b.type === block.type)?.icon}</span>
+          <button className="lf-block-remove" onClick={onRemove} title="Remove block">✕</button>
+        </div>
+        <input
+          className="lf-block-url-input"
+          value={block.url || ""}
+          onChange={(e) => update({ url: e.target.value })}
+          placeholder={block.type === "image" ? "Image URL" : block.type === "audio" ? "Audio URL" : "Video URL (YouTube, Vimeo, or direct)"}
+        />
+        <input
+          className="lf-block-caption-input"
+          value={block.caption || ""}
+          onChange={(e) => update({ caption: e.target.value })}
+          placeholder="Caption (optional)"
+        />
+        {block.url && block.type === "image" && (
+          <img className="lf-block-preview" src={block.url} alt={block.caption || ""} />
+        )}
+        {block.url && block.type === "audio" && (
+          <audio className="lf-block-preview" src={block.url} controls />
+        )}
+        {block.url && block.type === "video" && (
+          <div className="lf-block-video-wrap">
+            {block.url.includes("youtube.com") || block.url.includes("youtu.be") ? (
+              <iframe
+                className="lf-block-preview"
+                src={`https://www.youtube.com/embed/${block.url.match(/(?:v=|youtu\.be\/)([^&?]+)/)?.[1] || ""}`}
+                allowFullScreen
+              />
+            ) : block.url.includes("vimeo.com") ? (
+              <iframe
+                className="lf-block-preview"
+                src={`https://player.vimeo.com/video/${block.url.match(/vimeo\.com\/(\d+)/)?.[1] || ""}`}
+                allowFullScreen
+              />
+            ) : (
+              <video className="lf-block-preview" src={block.url} controls />
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return null;
+}
+
 function ArticleForm({ onSave, onCancel, initial }) {
   const [title, setTitle] = useState(initial?.title || "");
   const [thread, setThread] = useState(initial?.thread || "philosophy");
   const [kind, setKind] = useState(initial?.kind || "Essay");
-  const [body, setBody] = useState(initial?.body || "");
+  const [blocks, setBlocks] = useState(() => {
+    if (initial?.blocks?.length) return initial.blocks;
+    if (initial?.body) {
+      return initial.body.split("\n\n").filter(Boolean).map((p) => ({ type: "text", content: p }));
+    }
+    return [{ type: "text", content: "" }];
+  });
+  const bodyRef = useRef(null);
+
+  const addBlock = (type) => {
+    setBlocks((prev) => [...prev, { type, content: "", url: "", caption: "" }]);
+  };
+
+  const updateBlock = (index, patch) => {
+    setBlocks((prev) => prev.map((b, i) => i === index ? { ...b, ...patch } : b));
+  };
+
+  const removeBlock = (index) => {
+    setBlocks((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const moveBlock = (index, dir) => {
+    setBlocks((prev) => {
+      const next = [...prev];
+      const target = index + dir;
+      if (target < 0 || target >= next.length) return next;
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  };
 
   const save = () => {
-    if (!title.trim() || !body.trim()) return;
-    const mins = Math.max(1, Math.ceil(body.split(/\s+/).length / 200));
-    const excerpt = body.split("\n")[0].slice(0, 120);
+    if (!title.trim()) return;
+    const hasContent = blocks.some((b) => (b.type === "text" || b.type === "h2" || b.type === "h3") && b.content?.trim());
+    if (!hasContent) return;
+    const bodyText = blocks
+      .filter((b) => b.type === "text" || b.type === "h2" || b.type === "h3")
+      .map((b) => b.content)
+      .join("\n\n");
+    const mins = Math.max(1, Math.ceil(bodyText.split(/\s+/).length / 200));
+    const excerpt = bodyText.split("\n")[0].slice(0, 120);
     onSave({
       id: initial?.id || `custom_${Date.now()}`,
       title: title.trim(),
       thread, kind,
       minutes: mins,
-      dateLabel: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-      excerpt, body: body.trim(),
+      dateLabel: initial?.dateLabel || new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      excerpt, body: bodyText, blocks,
     });
   };
 
@@ -46,7 +171,7 @@ function ArticleForm({ onSave, onCancel, initial }) {
         <button className="lf-back" onClick={onCancel}>← Back</button>
         <div className="lf-editor-bar-actions">
           <button className="lf-btn lf-btn-ghost" onClick={onCancel}>Cancel</button>
-          <button className="lf-btn lf-btn-primary" onClick={save} disabled={!title.trim() || !body.trim()}>Publish</button>
+          <button className="lf-btn lf-btn-primary" onClick={save} disabled={!title.trim()}>Publish</button>
         </div>
       </div>
       <div className="lf-editor-body">
@@ -71,8 +196,102 @@ function ArticleForm({ onSave, onCancel, initial }) {
             </div>
           </div>
         </div>
-        <textarea className="lf-body-input" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Start writing..." autoFocus />
+
+        <div className="lf-blocks" ref={bodyRef}>
+          {blocks.map((block, i) => (
+            <div key={i} className="lf-block-wrap">
+              {blocks.length > 1 && (
+                <div className="lf-block-move">
+                  <button onClick={() => moveBlock(i, -1)} disabled={i === 0} title="Move up">↑</button>
+                  <button onClick={() => moveBlock(i, 1)} disabled={i === blocks.length - 1} title="Move down">↓</button>
+                </div>
+              )}
+              <BlockEditor
+                block={block}
+                onChange={(patch) => updateBlock(i, patch)}
+                onRemove={() => removeBlock(i)}
+              />
+            </div>
+          ))}
+        </div>
+
+        <div className="lf-add-block-bar">
+          {BLOCK_TYPES.map((bt) => (
+            <button key={bt.type} className="lf-add-block-btn" onClick={() => addBlock(bt.type)} title={bt.label}>
+              <span className="lf-add-block-icon">{bt.icon}</span>
+              <span className="lf-add-block-label">{bt.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
+    </div>
+  );
+}
+
+function ArticleReader({ article, onBack, onEdit, onDelete }) {
+  const t = threadById[article.thread];
+  const blocks = getBlocks(article);
+
+  return (
+    <div className="library">
+      <div className="lf-reader-bar">
+        <button className="lf-back" onClick={onBack}>← Back</button>
+        <div className="lf-reader-bar-actions">
+          <button className="lf-btn lf-btn-ghost" onClick={onEdit}>Edit</button>
+          <button className="lf-btn lf-btn-danger" onClick={onDelete}>Delete</button>
+        </div>
+      </div>
+      <article className="lf-reader">
+        <div className="lf-reader-meta">
+          <span className="lf-reader-dot" style={{ background: t?.color }} />
+          <span className="lf-reader-thread">{t?.name}</span>
+          <span className="lf-reader-sep">·</span>
+          <span className="lf-reader-kind">{article.kind}</span>
+          <span className="lf-reader-sep">·</span>
+          <span className="lf-reader-mins">{article.minutes} min read</span>
+          <span className="lf-reader-sep">·</span>
+          <span className="lf-reader-date">{article.dateLabel}</span>
+        </div>
+        <h1 className="lf-reader-title">{article.title}</h1>
+        <div className="lf-reader-body">
+          {blocks.map((block, i) => {
+            if (block.type === "text") return <p key={i}>{block.content}</p>;
+            if (block.type === "h2") return <h2 key={i}>{block.content}</h2>;
+            if (block.type === "h3") return <h3 key={i}>{block.content}</h3>;
+            if (block.type === "image") return (
+              <figure key={i} className="lf-reader-figure">
+                <img src={block.url} alt={block.caption || ""} />
+                {block.caption && <figcaption>{block.caption}</figcaption>}
+              </figure>
+            );
+            if (block.type === "audio") return (
+              <figure key={i} className="lf-reader-figure">
+                <audio src={block.url} controls />
+                {block.caption && <figcaption>{block.caption}</figcaption>}
+              </figure>
+            );
+            if (block.type === "video") return (
+              <figure key={i} className="lf-reader-figure">
+                {block.url.includes("youtube.com") || block.url.includes("youtu.be") ? (
+                  <iframe
+                    src={`https://www.youtube.com/embed/${block.url.match(/(?:v=|youtu\.be\/)([^&?]+)/)?.[1] || ""}`}
+                    allowFullScreen
+                  />
+                ) : block.url.includes("vimeo.com") ? (
+                  <iframe
+                    src={`https://player.vimeo.com/video/${block.url.match(/vimeo\.com\/(\d+)/)?.[1] || ""}`}
+                    allowFullScreen
+                  />
+                ) : (
+                  <video src={block.url} controls />
+                )}
+                {block.caption && <figcaption>{block.caption}</figcaption>}
+              </figure>
+            );
+            return null;
+          })}
+        </div>
+      </article>
     </div>
   );
 }
@@ -131,6 +350,7 @@ export default function Library({ regions = [] }) {
   const [filter, setFilter] = useState("All");
   const [editing, setEditing] = useState(null);
   const [openId, setOpenId] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const allArticles = useMemo(() => {
     const activeSeeds = seedArticles.filter((a) => !deleted.includes(a.id));
@@ -166,6 +386,7 @@ export default function Library({ regions = [] }) {
       saveDeleted(next);
     }
     if (openId === id) setOpenId(null);
+    setConfirmDelete(null);
   };
 
   if (tab === "editor" || editing) {
@@ -177,35 +398,13 @@ export default function Library({ regions = [] }) {
   }
 
   if (openId && open) {
-    const t = threadById[open.thread];
     return (
-      <div className="library">
-        <div className="lf-reader-bar">
-          <button className="lf-back" onClick={() => setOpenId(null)}>← Back</button>
-          <div className="lf-reader-bar-actions">
-            {open.id.startsWith("custom_") && (
-              <button className="lf-btn lf-btn-ghost" onClick={() => { setEditing(open); setOpenId(null); }}>Edit</button>
-            )}
-            <button className="lf-btn lf-btn-danger" onClick={() => { handleDelete(open.id); setOpenId(null); }}>Delete</button>
-          </div>
-        </div>
-        <article className="lf-reader">
-          <div className="lf-reader-meta">
-            <span className="lf-reader-dot" style={{ background: t?.color }} />
-            <span className="lf-reader-thread">{t?.name}</span>
-            <span className="lf-reader-sep">·</span>
-            <span className="lf-reader-kind">{open.kind}</span>
-            <span className="lf-reader-sep">·</span>
-            <span className="lf-reader-mins">{open.minutes} min read</span>
-            <span className="lf-reader-sep">·</span>
-            <span className="lf-reader-date">{open.dateLabel}</span>
-          </div>
-          <h1 className="lf-reader-title">{open.title}</h1>
-          <div className="lf-reader-body">
-            {open.body.split("\n\n").map((p, i) => <p key={i}>{p}</p>)}
-          </div>
-        </article>
-      </div>
+      <ArticleReader
+        article={open}
+        onBack={() => setOpenId(null)}
+        onEdit={() => { setEditing(open); setOpenId(null); }}
+        onDelete={() => setConfirmDelete(openId)}
+      />
     );
   }
 
@@ -242,7 +441,6 @@ export default function Library({ regions = [] }) {
               return (
                 <div key={a.id} className="lf-card-wrap">
                   <button className="lf-card" onClick={() => setOpenId(a.id)}>
-                    <div className="lf-card-accent" style={{ background: t?.color }} />
                     <div className="lf-card-body">
                       <div className="lf-card-top">
                         <span className="lf-card-kind">{a.kind}</span>
@@ -259,10 +457,8 @@ export default function Library({ regions = [] }) {
                     </div>
                   </button>
                   <div className="lf-card-actions">
-                    {a.id.startsWith("custom_") && (
-                      <button className="lf-card-action" onClick={(e) => { e.stopPropagation(); setEditing(a); setOpenId(null); }}>Edit</button>
-                    )}
-                    <button className="lf-card-action lf-card-action-del" onClick={(e) => { e.stopPropagation(); handleDelete(a.id); }}>Delete</button>
+                    <button className="lf-card-action" onClick={(e) => { e.stopPropagation(); setEditing(a); setOpenId(null); }}>Edit</button>
+                    <button className="lf-card-action lf-card-action-del" onClick={(e) => { e.stopPropagation(); setConfirmDelete(a.id); }}>Delete</button>
                   </div>
                 </div>
               );
@@ -271,6 +467,20 @@ export default function Library({ regions = [] }) {
         </>
       ) : (
         <LogSection regions={regions} />
+      )}
+
+      {confirmDelete && (
+        <div className="modal-backdrop" onClick={() => setConfirmDelete(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setConfirmDelete(null)}>✕</button>
+            <h2 className="ms-title">Delete entry?</h2>
+            <p className="ms-region">This action cannot be undone.</p>
+            <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+              <button className="ms-save" style={{ flex: 1 }} onClick={() => handleDelete(confirmDelete)}>Delete</button>
+              <button className="ed-clear" style={{ flex: 1 }} onClick={() => setConfirmDelete(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
