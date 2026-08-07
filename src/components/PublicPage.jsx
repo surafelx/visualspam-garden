@@ -1,7 +1,5 @@
 import { useState, useMemo } from "react";
-import { threadById, threads, timeAgo, dayKey } from "../data.js";
-
-const FEED_ICON = { water: "💧", note: "✎", grow: "🌸", sun: "☀️", checkin: "🌱" };
+import { threadById, threads } from "../data.js";
 
 export default function PublicPage({ onAdmin, regions = [], articles = [] }) {
   const [selectedThread, setSelectedThread] = useState(null);
@@ -11,28 +9,21 @@ export default function PublicPage({ onAdmin, regions = [], articles = [] }) {
     return articles.filter((a) => a.thread === selectedThread);
   }, [articles, selectedThread]);
 
-  const activeLogs = useMemo(() => {
-    const all = regions
-      .flatMap((r) => (r.logs || []).map((l) => ({ ...l, region: r.label, color: threadById[r.thread]?.color, thread: r.thread })))
-      .sort((a, b) => new Date(b.ts) - new Date(a.ts));
-    if (!selectedThread) return all.slice(0, 12);
-    return all.filter((l) => l.thread === selectedThread).slice(0, 12);
-  }, [regions, selectedThread]);
-
   const bedThreads = useMemo(() => {
     const map = {};
     regions.forEach((r) => {
-      if (!map[r.thread]) map[r.thread] = { thread: r.thread, beds: 0, logs: 0, label: threadById[r.thread]?.label || r.thread };
+      if (!map[r.thread]) map[r.thread] = { thread: r.thread, beds: 0, label: threadById[r.thread]?.label || r.thread };
       map[r.thread].beds++;
-      map[r.thread].logs += (r.logs || []).length;
     });
-    return Object.values(map).sort((a, b) => b.logs - a.logs);
+    return Object.values(map);
   }, [regions]);
 
   const selectedInfo = selectedThread ? threadById[selectedThread] : null;
 
   return (
     <div className="lp">
+      <div className="lp-texture" />
+
       <header className="lp-header">
         <div className="lp-header-inner">
           <div className="lp-brand">
@@ -49,30 +40,32 @@ export default function PublicPage({ onAdmin, regions = [], articles = [] }) {
           <p className="lp-hero-sub">Tending thoughts, and reading what matters.</p>
         </section>
 
-        <section className="lp-section">
-          <h2 className="lp-section-title">Beds</h2>
-          <div className="lp-beds-grid">
-            {bedThreads.map((bt) => {
-              const t = threadById[bt.thread];
-              return (
-                <button
-                  key={bt.thread}
-                  className={`lp-bed-btn ${selectedThread === bt.thread ? "on" : ""}`}
-                  onClick={() => setSelectedThread(selectedThread === bt.thread ? null : bt.thread)}
-                >
-                  <span className="lp-bed-icon">{t?.icon}</span>
-                  <span className="lp-bed-name">{t?.name}</span>
-                  <span className="lp-bed-meta">{bt.beds} bed{bt.beds > 1 ? "s" : ""} · {bt.logs} logs</span>
-                </button>
-              );
-            })}
-          </div>
-          {selectedThread && (
-            <button className="lp-clear-filter" onClick={() => setSelectedThread(null)}>
-              Show all
-            </button>
-          )}
-        </section>
+        {bedThreads.length > 0 && (
+          <section className="lp-section">
+            <h2 className="lp-section-title">Beds</h2>
+            <div className="lp-beds-grid">
+              {bedThreads.map((bt) => {
+                const t = threadById[bt.thread];
+                return (
+                  <button
+                    key={bt.thread}
+                    className={`lp-bed-btn ${selectedThread === bt.thread ? "on" : ""}`}
+                    onClick={() => setSelectedThread(selectedThread === bt.thread ? null : bt.thread)}
+                  >
+                    <span className="lp-bed-icon">{t?.icon}</span>
+                    <span className="lp-bed-name">{t?.name}</span>
+                    <span className="lp-bed-meta">{bt.beds} bed{bt.beds > 1 ? "s" : ""}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {selectedThread && (
+              <button className="lp-clear-filter" onClick={() => setSelectedThread(null)}>
+                Show all
+              </button>
+            )}
+          </section>
+        )}
 
         {activeArticles.length > 0 && (
           <section className="lp-section">
@@ -98,25 +91,6 @@ export default function PublicPage({ onAdmin, regions = [], articles = [] }) {
                   </div>
                 );
               })}
-            </div>
-          </section>
-        )}
-
-        {activeLogs.length > 0 && (
-          <section className="lp-section">
-            <h2 className="lp-section-title">Activity</h2>
-            <div className="lp-logs">
-              {activeLogs.map((l, i) => (
-                <div key={i} className="lp-log-row">
-                  <span className="lp-log-dot" style={{ background: l.color }} />
-                  <span className="lp-log-icon">{FEED_ICON[l.type] || "•"}</span>
-                  <span className="lp-log-content">
-                    <span className="lp-log-region">{l.region}</span>
-                    <span className="lp-log-text">{l.text}</span>
-                  </span>
-                  <span className="lp-log-time">{timeAgo(l.ts)}</span>
-                </div>
-              ))}
             </div>
           </section>
         )}
