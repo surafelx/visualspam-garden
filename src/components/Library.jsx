@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { articles as seedArticles, threadById, threads, timeAgo, dayKey, CROP_CHOICES } from "../data.js";
+import { articles as seedArticles, threadById, threads, timeAgo, dayKey } from "../data.js";
+import * as api from "../api.js";
 
 const KINDS = ["All", "Essay", "Note", "Log", "Book"];
 
@@ -25,9 +26,34 @@ export function getAllArticles() {
   return [...custom, ...activeSeeds];
 }
 
-export function getPublicArticles() {
+export async function getPublicArticles() {
   const custom = loadCustom();
-  return [...custom, ...seedArticles];
+  try {
+    const dbEssays = await api.fetchPublicEssays();
+    const dbIds = new Set(dbEssays.map((a) => a.id));
+    const localOnly = custom.filter((a) => !dbIds.has(a.id));
+    return [...dbEssays, ...localOnly, ...seedArticles];
+  } catch {
+    return [...custom, ...seedArticles];
+  }
+}
+
+export async function syncEssaysToApi() {
+  try {
+    const custom = loadCustom();
+    const drafts = loadDrafts();
+    const all = [...custom, ...drafts];
+    for (const essay of all) {
+      try {
+        const existing = await api.fetchEssays().then((list) => list.find((e) => e.id === essay.id));
+        if (existing) {
+          await api.updateEssay(essay.id, essay);
+        } else {
+          await api.createEssay(essay);
+        }
+      } catch { /* skip individual errors */ }
+    }
+  } catch { /* sync best-effort */ }
 }
 
 function slugify(text) {
@@ -180,7 +206,7 @@ function ArticleForm({ onSave, onCancel, initial, regions = [] }) {
     const mins = Math.max(1, Math.ceil(bodyText.split(/\s+/).length / 200));
     const excerpt = bodyText.split("\n")[0].slice(0, 120);
     onSave({
-      id: initial?.id || `custom_${Date.now()}`,
+      id: initial?.id || `essay_${Date.now()}`,
       title: title.trim(),
       thread, kind,
       regionId: regionId || undefined,
@@ -380,7 +406,7 @@ function ArticleReader({ article, onBack, onEdit, onDelete, regions = [] }) {
         <div className="lf-reader-body">
           {blocks.map((block, i) => {
             if (block.type === "text") {
-              const lines = block.content.split("\n");
+              const lines = (block.content || "").split("\n");
               return <p key={i}>{lines.map((line, li) => <span key={li}>{li > 0 && <br />}{line}</span>)}</p>;
             }
             if (block.type === "h2") return <h2 key={i}>{block.content}</h2>;
@@ -502,13 +528,13 @@ export default function Library({ regions = [], selectedId = null, onSelectArtic
 
   const handleSave = (article) => {
     if (article.draft) {
-      const { draft, ...draftData } = article;
       const exists = drafts.findIndex((d) => d.id === article.id);
       let next;
-      if (exists >= 0) { next = [...drafts]; next[exists] = draftData; }
-      else { next = [draftData, ...drafts]; }
+      if (exists >= 0) { next = [...drafts]; next[exists] = article; }
+      else { next = [article, ...drafts]; }
       setDrafts(next);
       saveDrafts(next);
+      api.createEssay(article).catch(() => {});
       setEditing(null);
       return;
     }
@@ -518,6 +544,11 @@ export default function Library({ regions = [], selectedId = null, onSelectArtic
     else { next = [article, ...custom]; }
     setCustom(next);
     saveCustom(next);
+    if (exists >= 0) {
+      api.updateEssay(article.id, article).catch(() => {});
+    } else {
+      api.createEssay(article).catch(() => {});
+    }
     setEditing(null);
   };
 
@@ -529,17 +560,20 @@ export default function Library({ regions = [], selectedId = null, onSelectArtic
     const next = [article, ...custom];
     setCustom(next);
     saveCustom(next);
+    api.updateEssay(draft.id, article).catch(() => {});
   };
 
   const handleDelete = (id) => {
-    if (id.startsWith("custom_")) {
+    if (id.startsWith("essay_")) {
       const next = custom.filter((a) => a.id !== id);
       setCustom(next);
       saveCustom(next);
-    } else if (id.startsWith("draft_")) {
+      api.deleteEssay(id).catch(() => {});
+    } else if (id.startsWith("essay_")) {
       const next = drafts.filter((d) => d.id !== id);
       setDrafts(next);
       saveDrafts(next);
+      api.deleteEssay(id).catch(() => {});
     } else {
       const next = [...deleted, id];
       setDeleted(next);
@@ -568,8 +602,6 @@ export default function Library({ regions = [], selectedId = null, onSelectArtic
       />
     );
   }
-
-  const displayDrafts = tab === "drafts" ? drafts : [];
 
   return (
     <div className="library">

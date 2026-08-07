@@ -5,7 +5,7 @@ import { encryptText, decryptText } from "./crypto.js";
 const FEED_ICON = { water: "💧", note: "✎", grow: "🌸", sun: "☀️", checkin: "🌱" };
 import * as api from "./api.js";
 import GardenScene from "./components/GardenScene.jsx";
-import Library, { getAllArticles, getPublicArticles } from "./components/Library.jsx";
+import Library, { getAllArticles, getPublicArticles, syncEssaysToApi } from "./components/Library.jsx";
 import PlanView from "./components/PlanView.jsx";
 import DurationPicker from "./components/DurationPicker.jsx";
 import CountdownTimer from "./components/CountdownTimer.jsx";
@@ -88,7 +88,10 @@ export default function App() {
     localStorage.setItem("vsg_dark", darkMode ? "1" : "0");
   }, [darkMode]);
 
-  const handleLogin = () => setAdmin(true);
+  const handleLogin = () => {
+    setAdmin(true);
+    syncEssaysToApi();
+  };
   const handleLogout = () => { localStorage.removeItem("vsg_admin"); setAdmin(false); };
 
   useEffect(() => {
@@ -111,7 +114,7 @@ export default function App() {
   const [view, setViewState] = useState(() => hashRoute.route === "bed" ? "bed" : hashRoute.route === "essay" ? "library" : "garden");
   const [showLogin, setShowLogin] = useState(false);
   const [libraryArticles, setLibraryArticles] = useState(() => getAllArticles());
-  const [publicArticles, setPublicArticles] = useState(() => getPublicArticles());
+  const [publicArticles, setPublicArticles] = useState([]);
   const [clock, setClock] = useState(new Date());
   useEffect(() => {
     const id = setInterval(() => setClock(new Date()), 15000);
@@ -119,14 +122,14 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    getPublicArticles().then(setPublicArticles);
     setLibraryArticles(getAllArticles());
-    setPublicArticles(getPublicArticles());
   }, []);
 
   useEffect(() => {
     if (view === "garden") {
       setLibraryArticles(getAllArticles());
-      setPublicArticles(getPublicArticles());
+      getPublicArticles().then(setPublicArticles);
     }
   }, [view]);
 

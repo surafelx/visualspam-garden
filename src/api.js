@@ -26,6 +26,13 @@ export const addFruit = (regionId, plantId, fruit) => request(`/regions/${region
 export const updateFruit = (regionId, plantId, fruitId, data) => request(`/regions/${regionId}/plants/${plantId}/fruits/${fruitId}`, { method: "PUT", body: data });
 export const deleteFruit = (regionId, plantId, fruitId) => request(`/regions/${regionId}/plants/${plantId}/fruits/${fruitId}`, { method: "DELETE" });
 
+// ── Essays ──
+export const fetchEssays = () => request("/essays");
+export const fetchPublicEssays = () => request("/essays/public");
+export const createEssay = (data) => request("/essays", { method: "POST", body: data });
+export const updateEssay = (id, data) => request(`/essays/${id}`, { method: "PUT", body: data });
+export const deleteEssay = (id) => request(`/essays/${id}`, { method: "DELETE" });
+
 // ── Local Garden Analysis (no API needed) ──
 export function analyzeAll(regions) {
   if (!regions || !regions.length) return null;
