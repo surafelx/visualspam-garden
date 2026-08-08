@@ -582,16 +582,25 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 .rail-head { display: flex; align-items: center; justify-content: space-between; color: #4a4f40; font-size: 0.9rem; margin-bottom: 10px; padding: 0 4px; }
 .rail-thirsty { font-size: 0.72rem; color: #2f7fa0; background: #dcecf4; border-radius: 7px; padding: 2px 7px; }
 .bed-rail { list-style: none; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; }
-.bed-rail-item { display: flex; align-items: center; gap: 10px; padding: 9px 8px; border-radius: 10px; cursor: pointer; transition: background 0.14s; }
+.bed-rail-item { border-radius: 10px; transition: background 0.14s; }
 .bed-rail-item:hover { background: #e9eddf; }
+.bed-rail-header { display: flex; align-items: center; gap: 10px; padding: 9px 8px; cursor: pointer; }
 .bed-rail-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; box-shadow: 0 0 6px -1px currentColor; }
 .bed-rail-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
 .bed-rail-main b { font-size: 0.84rem; color: #33362c; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bed-rail-stage { font-size: 0.68rem; color: #8a9079; }
+.bed-rail-count { font-size: 0.65rem; color: #a39a86; flex: 0 0 auto; }
 .bed-rail-log {
   font-size: 0.66rem; color: #a39a86; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   margin-top: 2px;
 }
+.bed-rail-plants { list-style: none; padding: 0 8px 6px 28px; margin: 0; }
+.bed-rail-plant { display: flex; align-items: center; gap: 5px; padding: 3px 0; font-size: 0.7rem; color: #5a5548; }
+.bed-rail-plant-icon { font-size: 0.6rem; flex: 0 0 auto; }
+.bed-rail-plant-name { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bed-rail-plant-fruits { display: flex; gap: 4px; flex: 0 0 auto; font-size: 0.6rem; }
+.bed-rail-fruit-done { color: #4c9a63; }
+.bed-rail-fruit-pending { color: #e0a030; }
 .bed-rail-pips { display: flex; gap: 3px; flex: 0 0 auto; }
 .bed-rail-pips i { width: 5px; height: 5px; border-radius: 50%; background: #cfd6c2; }
 
@@ -2121,7 +2130,10 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 [data-theme="dark"] .bed-rail-item:hover { background: var(--bg-hover); }
 [data-theme="dark"] .bed-rail-main b { color: var(--text); }
 [data-theme="dark"] .bed-rail-stage { color: var(--text-muted); }
+[data-theme="dark"] .bed-rail-count { color: var(--text-muted); }
 [data-theme="dark"] .bed-rail-log { color: var(--text-muted); }
+[data-theme="dark"] .bed-rail-plant { color: var(--text-dim); }
+[data-theme="dark"] .bed-rail-plant-name { color: var(--text); }
 [data-theme="dark"] .bed-rail-pips i { background: var(--border); }
 [data-theme="dark"] .rail-next-plan { background: #2a2818; border-color: var(--border); }
 [data-theme="dark"] .rail-next-item { color: var(--text); }

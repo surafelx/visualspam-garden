@@ -332,6 +332,9 @@ function AdminShell({ regions, setRegions, settings, showSettings, setShowSettin
           {regions.map((r) => {
             const t = threadById[r.thread];
             const lastLog = (r.logs || [])[0];
+            const plants = r.plants || [];
+            const pendingFruits = plants.reduce((n, p) => n + (p.fruits || []).filter((f) => !f.done).length, 0);
+            const doneFruits = plants.reduce((n, p) => n + (p.fruits || []).filter((f) => f.done).length, 0);
             return (
               <li key={r.id} className="bed-rail-item" draggable="true"
                 onDragStart={(e) => {
@@ -339,19 +342,36 @@ function AdminShell({ regions, setRegions, settings, showSettings, setShowSettin
                   e.dataTransfer.effectAllowed = "copy";
                   e.currentTarget.classList.add("dragging");
                 }}
-                onDragEnd={(e) => e.currentTarget.classList.remove("dragging")}
-                onClick={() => viewBedDetail(r.id)}>
-                <span className="bed-rail-drag-handle">⠿</span>
-                <span className="bed-rail-dot" style={{ background: t?.color }} />
-                <span className="bed-rail-main">
-                  <b>{r.label}</b>
-                  <span className="bed-rail-stage">{t?.icon} {t?.label}</span>
-                  {lastLog && (
-                    <span className="bed-rail-log">
-                      {lastLog.type === "water" ? "💧" : lastLog.type === "sun" ? "☀️" : lastLog.type === "note" ? "✎" : "•"} {lastLog.text?.slice(0, 35)}
-                    </span>
-                  )}
-                </span>
+                onDragEnd={(e) => e.currentTarget.classList.remove("dragging")}>
+                <div className="bed-rail-header" onClick={() => viewBedDetail(r.id)}>
+                  <span className="bed-rail-drag-handle">⠿</span>
+                  <span className="bed-rail-dot" style={{ background: t?.color }} />
+                  <span className="bed-rail-main">
+                    <b>{r.label}</b>
+                    <span className="bed-rail-stage">{t?.icon} {t?.label}</span>
+                  </span>
+                  {plants.length > 0 && <span className="bed-rail-count">{plants.length}🌱</span>}
+                </div>
+                {plants.length > 0 && (
+                  <ul className="bed-rail-plants">
+                    {plants.map((p) => {
+                      const pFruits = (p.fruits || []).filter((f) => !f.done);
+                      const dFruits = (p.fruits || []).filter((f) => f.done);
+                      return (
+                        <li key={p.id} className="bed-rail-plant">
+                          <span className="bed-rail-plant-icon">🌱</span>
+                          <span className="bed-rail-plant-name">{p.name}</span>
+                          {(pFruits.length > 0 || dFruits.length > 0) && (
+                            <span className="bed-rail-plant-fruits">
+                              {dFruits.length > 0 && <span className="bed-rail-fruit-done">✓{dFruits.length}</span>}
+                              {pFruits.length > 0 && <span className="bed-rail-fruit-pending">🍊{pFruits.length}</span>}
+                            </span>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
               </li>
             );
           })}
