@@ -74,6 +74,7 @@ function DayPlanner({ regions, date, onLogSunshine }) {
 
   const [slots, setSlots] = useState(() => loadPlan(storeKey));
   const [active, setActive] = useState(null);
+  const [dragOver, setDragOver] = useState(null);
 
   const save = (next) => { setSlots(next); savePlan(storeKey, next); };
 
@@ -138,7 +139,21 @@ function DayPlanner({ regions, date, onLogSunshine }) {
           });
 
           return (
-            <li key={h} className={`plan-slot ${isNow ? "now" : ""} ${filled ? "filled" : ""} ${editing ? "editing" : ""}`}>
+            <li key={h} className={`plan-slot ${isNow ? "now" : ""} ${filled ? "filled" : ""} ${editing ? "editing" : ""} ${dragOver === h ? "drag-over" : ""}`}
+              onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; setDragOver(h); }}
+              onDragLeave={() => setDragOver(null)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOver(null);
+                try {
+                  const data = JSON.parse(e.dataTransfer.getData("application/json"));
+                  if (data.type === "bed") {
+                    const newTask = { bedId: data.bedId, plantId: null, text: "", hours: 1 };
+                    save({ ...slots, [h]: [...getTasks(h), newTask] });
+                    setActive(h);
+                  }
+                } catch {}
+              }}>
               <span className="plan-slot-time">{fmtHour(h)}</span>
               {!editing ? (
                 <button className="plan-slot-btn" onClick={() => setActive(h)}>

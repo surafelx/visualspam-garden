@@ -595,6 +595,20 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 .bed-rail-pips { display: flex; gap: 3px; flex: 0 0 auto; }
 .bed-rail-pips i { width: 5px; height: 5px; border-radius: 50%; background: #cfd6c2; }
 
+.bed-rail-drag-handle {
+  font-size: 0.7rem; color: #c5bfb0; cursor: grab; flex: 0 0 auto;
+  user-select: none; line-height: 1; padding: 2px;
+}
+.bed-rail-drag-handle:hover { color: #8a9079; }
+.bed-rail-item.dragging { opacity: 0.4; }
+.bed-rail-item[draggable="true"] { cursor: grab; }
+.bed-rail-item[draggable="true"]:active { cursor: grabbing; }
+
+.rail-dnd-hint {
+  font-size: 0.65rem; color: #b5ad9a; text-align: center;
+  margin: 0 0 6px; font-style: italic;
+}
+
 .rail-next-plan {
   background: #fdf6e3; border: 1px solid #e8d5a8; border-radius: 12px;
   padding: 10px 12px; margin-bottom: 14px;
@@ -1836,6 +1850,10 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 .plan-slot.now .plan-slot-time { color: #4c9a63; font-weight: 700; }
 .plan-slot.filled { }
 .plan-slot.editing { background: #f8f7f3; border-radius: 8px; padding: 8px; margin: 2px -8px; }
+.plan-slot.drag-over {
+  background: #e6f2e4; border: 2px dashed #4c9a63; border-radius: 6px;
+  outline: 2px solid rgba(76, 154, 99, 0.2);
+}
 .plan-slot-time {
   flex: 0 0 50px; font-size: 0.72rem; font-variant-numeric: tabular-nums;
   color: #a39a86; padding-top: 6px; text-align: right;

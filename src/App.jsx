@@ -401,12 +401,21 @@ export default function App() {
           <button className="rail-add-btn" onClick={() => setBedForm("new")} title="Add new bed">+</button>
           {thirsty > 0 && <span className="rail-thirsty">💧 {thirsty}</span>}
         </div>
+        <p className="rail-dnd-hint">drag a bed into your plan →</p>
         <ul className="bed-rail">
           {regions.map((r) => {
             const t = threadById[r.thread];
             const lastLog = (r.logs || [])[0];
             return (
-              <li key={r.id} className="bed-rail-item" onClick={() => viewBedDetail(r.id)}>
+              <li key={r.id} className="bed-rail-item" draggable="true"
+                onDragStart={(e) => {
+                  e.dataTransfer.setData("application/json", JSON.stringify({ type: "bed", bedId: r.id, bedLabel: r.label, thread: r.thread }));
+                  e.dataTransfer.effectAllowed = "copy";
+                  e.currentTarget.classList.add("dragging");
+                }}
+                onDragEnd={(e) => e.currentTarget.classList.remove("dragging")}
+                onClick={() => viewBedDetail(r.id)}>
+                <span className="bed-rail-drag-handle">⠿</span>
                 <span className="bed-rail-dot" style={{ background: t?.color }} />
                 <span className="bed-rail-main">
                   <b>{r.label}</b>
