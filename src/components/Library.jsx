@@ -26,15 +26,22 @@ export function getAllArticles() {
   return [...custom, ...activeSeeds];
 }
 
+export function getAllDrafts() {
+  return loadDrafts();
+}
+
 export async function getPublicArticles() {
   const custom = loadCustom();
+  const drafts = loadDrafts();
+  const draftIds = new Set(drafts.map((d) => d.id));
+  const published = custom.filter((a) => !draftIds.has(a.id));
   try {
     const dbEssays = await api.fetchPublicEssays();
     const dbIds = new Set(dbEssays.map((a) => a.id));
-    const localOnly = custom.filter((a) => !dbIds.has(a.id));
+    const localOnly = published.filter((a) => !dbIds.has(a.id));
     return [...dbEssays, ...localOnly, ...seedArticles];
   } catch {
-    return [...custom, ...seedArticles];
+    return [...published, ...seedArticles];
   }
 }
 
@@ -43,10 +50,11 @@ export async function syncEssaysToApi() {
     const custom = loadCustom();
     const drafts = loadDrafts();
     const all = [...custom, ...drafts];
+    const dbEssays = await api.fetchEssays().catch(() => []);
+    const dbIds = new Set(dbEssays.map((e) => e.id));
     for (const essay of all) {
       try {
-        const existing = await api.fetchEssays().then((list) => list.find((e) => e.id === essay.id));
-        if (existing) {
+        if (dbIds.has(essay.id)) {
           await api.updateEssay(essay.id, essay);
         } else {
           await api.createEssay(essay);
