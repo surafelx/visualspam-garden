@@ -558,12 +558,12 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 }
 .dash-brand { font-size: 1.5rem; }
 .dash-nav { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
-.dash-nav button {
+.dash-nav button, .dash-nav a {
   width: 40px; height: 40px; border-radius: 12px; font-size: 1.15rem; color: #7c8370;
-  transition: background 0.15s, transform 0.1s;
+  transition: background 0.15s, transform 0.1s; text-decoration: none; display: flex; align-items: center; justify-content: center;
 }
-.dash-nav button:hover { background: #e7ebdd; }
-.dash-nav button.on { background: var(--sprout); box-shadow: 0 3px 0 #4c9a63; }
+.dash-nav button:hover, .dash-nav a:hover { background: #e7ebdd; }
+.dash-nav button.on, .dash-nav a.on { background: var(--sprout); box-shadow: 0 3px 0 #4c9a63; }
 
 /* centre panel holds the active view (garden fills it) */
 .dash-main {
@@ -692,7 +692,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 .log-add button:disabled { opacity: 0.4; }
 .btn-sun:hover, .log-add button:not(:disabled):hover { filter: brightness(1.05); transform: translateY(-1px); }
 .btn-sun:active, .log-add button:active { transform: translateY(0); }
-.dash-nav button.on { box-shadow: 0 5px 14px -6px rgba(76,154,99,0.9); }
+.dash-nav button.on, .dash-nav a.on { box-shadow: 0 5px 14px -6px rgba(76,154,99,0.9); }
 
 /* ── recent activity feed (right rail) ── */
 .rail-head-sub { margin-top: 14px; padding-top: 12px; border-top: 1px solid #e2e6d7; }
@@ -1376,12 +1376,12 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
   display: flex; align-items: center; justify-content: space-between;
 }
 .lp-brand { display: flex; align-items: center; gap: 8px; }
-.lp-brand-icon {
+.lp-brand-icon, a.lp-brand-icon {
   font-size: 1.3rem; cursor: pointer; background: none; border: none; padding: 0;
-  transition: opacity 0.2s; opacity: 0.85;
+  transition: opacity 0.2s; opacity: 0.85; text-decoration: none; color: inherit;
 }
 .lp-brand-icon:hover { opacity: 1; }
-.lp-brand-name { font-weight: 600; font-size: 1rem; letter-spacing: -0.01em; color: #2c2920; }
+.lp-brand-name, a.lp-brand-name { font-weight: 600; font-size: 1rem; letter-spacing: -0.01em; color: #2c2920; text-decoration: none; }
 
 .lp-main { max-width: 600px; margin: 0 auto; padding: 0 24px 80px; position: relative; z-index: 1; }
 
@@ -1392,13 +1392,13 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
   margin: 0 0 32px; letter-spacing: -0.02em;
 }
 .lp-list-items { display: flex; flex-direction: column; }
-.lp-list-item {
+.lp-list-item, a.lp-list-item {
   display: flex; flex-direction: column; gap: 4px; padding: 16px 0;
   border-bottom: 1px solid #ebe6d8; text-align: left; background: none;
   border-left: none; border-right: none; border-top: none; cursor: pointer;
-  font-family: inherit; transition: background 0.1s;
+  font-family: inherit; transition: background 0.1s; text-decoration: none; color: inherit;
 }
-.lp-list-item:hover { background: rgba(0,0,0,0.015); margin: 0 -12px; padding: 16px 12px; border-radius: 8px; }
+.lp-list-item:hover, a.lp-list-item:hover { background: rgba(0,0,0,0.015); margin: 0 -12px; padding: 16px 12px; border-radius: 8px; }
 .lp-list-item-title {
   font-family: var(--serif); font-size: 1.15rem; font-weight: 500; color: #1a1814;
   line-height: 1.3;
@@ -2112,9 +2112,9 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 /* dashboard shell */
 [data-theme="dark"] .dash { background: linear-gradient(160deg, #1a1c16, #1e2018); }
 [data-theme="dark"] .dash-left { background: var(--bg-raised); border-color: var(--border); box-shadow: 0 8px 22px -16px rgba(0,0,0,0.6); }
-[data-theme="dark"] .dash-nav button { color: var(--text-dim); }
-[data-theme="dark"] .dash-nav button:hover { background: var(--bg-hover); }
-[data-theme="dark"] .dash-nav button.on { background: var(--accent); box-shadow: 0 3px 0 #2a6a30; }
+[data-theme="dark"] .dash-nav button, [data-theme="dark"] .dash-nav a { color: var(--text-dim); }
+[data-theme="dark"] .dash-nav button:hover, [data-theme="dark"] .dash-nav a:hover { background: var(--bg-hover); }
+[data-theme="dark"] .dash-nav button.on, [data-theme="dark"] .dash-nav a.on { background: var(--accent); box-shadow: 0 3px 0 #2a6a30; }
 [data-theme="dark"] .dash-right { background: var(--bg-raised); border-color: var(--border); box-shadow: 0 8px 22px -16px rgba(0,0,0,0.6); }
 [data-theme="dark"] .rail-head { color: var(--text-dim); }
 [data-theme="dark"] .rail-head-sub { border-top-color: var(--border); }

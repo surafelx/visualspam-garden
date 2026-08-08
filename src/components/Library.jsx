@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { articles as seedArticles, threadById, threads, timeAgo, dayKey } from "../data.js";
 import * as api from "../api.js";
 
@@ -498,7 +499,9 @@ function formatDate(dk) {
   return d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
 }
 
-export default function Library({ regions = [], selectedId = null, onSelectArticle = null }) {
+export default function Library({ regions = [] }) {
+  const { slug } = useParams();
+  const navigate = useNavigate();
   const [custom, setCustom] = useState(loadCustom);
   const [drafts, setDrafts] = useState(loadDrafts);
   const [deleted, setDeleted] = useState(loadDeleted);
@@ -522,11 +525,14 @@ export default function Library({ regions = [], selectedId = null, onSelectArtic
   }, [allArticles]);
 
   useEffect(() => {
-    if (selectedId) {
-      const found = allArticles.find((a) => a.id === selectedId);
-      if (found) setOpenId(selectedId);
+    if (slug) {
+      const found = allArticles.find((a) => slugify(a.title) === slug);
+      if (found) setOpenId(found.id);
+      else setOpenId(null);
+    } else {
+      setOpenId(null);
     }
-  }, [selectedId, allArticles]);
+  }, [slug, allArticles]);
 
   const handleSave = (article) => {
     if (article.draft) {
@@ -597,7 +603,7 @@ export default function Library({ regions = [], selectedId = null, onSelectArtic
     return (
       <ArticleReader
         article={open}
-        onBack={() => { setOpenId(null); if (onSelectArticle) onSelectArticle(null); }}
+        onBack={() => { setOpenId(null); navigate("/admin/library"); }}
         onEdit={() => { setEditing(open); setOpenId(null); }}
         onDelete={() => setConfirmDelete(openId)}
         regions={regions}
@@ -643,7 +649,7 @@ export default function Library({ regions = [], selectedId = null, onSelectArtic
               const aFruit = aPlant && a.fruitId ? (aPlant.fruits || []).find((f) => f.id === a.fruitId) : null;
               return (
                 <div key={a.id} className="lf-card-wrap">
-                  <button className="lf-card" onClick={() => setOpenId(a.id)}>
+                  <button className="lf-card" onClick={() => navigate(`/admin/library/${slugify(a.title)}`)}>
                     <div className="lf-card-body">
                       <div className="lf-card-top">
                         <span className="lf-card-kind">{a.kind}</span>

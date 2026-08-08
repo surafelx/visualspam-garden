@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate, Link } from "react-router-dom";
 import { threadById, timeAgo, dayKey } from "./data.js";
 import { encryptText, decryptText } from "./crypto.js";
 
@@ -34,121 +35,75 @@ async function saveSettings(s) {
   localStorage.setItem("vsg_settings", JSON.stringify({ encApiKey, encModel }));
 }
 
-function parseHash() {
-  const hash = window.location.hash.slice(1) || "/";
-  const parts = hash.split("/").filter(Boolean);
-  if (parts[0] === "essay" && parts[1]) return { route: "essay", slug: parts[1] };
-  if (parts[0] === "bed" && parts[1]) return { route: "bed", id: parts[1] };
-  return { route: "garden" };
+const aiAnalyze = async (regions, settings) => {
+  const { apiKey, model } = settings;
+  const prompt = `You are a garden life-coach AI. Analyze these garden beds and give a short 2-3 sentence overall summary plus one top priority action. Be concise and warm.\n\nBeds:\n${regions.map((r) => {
+    const days = Math.floor((Date.now() - new Date(r.lastTs).getTime()) / 864e5);
+    const plants = (r.plants || []).length;
+    return `- ${r.label} (tended ${r.tended}x, ${r.sunshine || 0}m sun, ${days}d since water, ${plants} plants)`;
+  }).join("\n")}`;
+  if (!apiKey) return null;
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({ model: model || "google/gemini-2.0-flash-001", messages: [{ role: "user", content: prompt }], max_tokens: 200 }),
+    });
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content || null;
+  } catch { return null; }
+};
+
+function PublicRoutes({ regions, publicArticles, handleLogin }) {
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginGate onLogin={handleLogin} />} />
+      <Route path="/essay/:slug" element={
+        <PublicPage
+          onLogin={() => window.location.href = "/login"}
+          regions={regions}
+          articles={publicArticles}
+        />
+      } />
+      <Route path="*" element={
+        <PublicPage
+          onLogin={() => window.location.href = "/login"}
+          regions={regions}
+          articles={publicArticles}
+        />
+      } />
+    </Routes>
+  );
 }
 
-function setHash(route) {
-  window.location.hash = route;
-}
-
-  const aiAnalyze = async (regions, settings) => {
-    const { apiKey, model } = settings;
-    const prompt = `You are a garden life-coach AI. Analyze these garden beds and give a short 2-3 sentence overall summary plus one top priority action. Be concise and warm.\n\nBeds:\n${regions.map((r) => {
-      const days = Math.floor((Date.now() - new Date(r.lastTs).getTime()) / 864e5);
-      const plants = (r.plants || []).length;
-      return `- ${r.label} (tended ${r.tended}x, ${r.sunshine || 0}m sun, ${days}d since water, ${plants} plants)`;
-    }).join("\n")}`;
-    if (!apiKey) return null;
-    try {
-      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({ model: model || "google/gemini-2.0-flash-001", messages: [{ role: "user", content: prompt }], max_tokens: 200 }),
-      });
-      const data = await res.json();
-      return data.choices?.[0]?.message?.content || null;
-    } catch { return null; }
-  };
-
-export default function App() {
-  const [admin, setAdmin] = useState(() => localStorage.getItem("vsg_admin") === "1");
-  const [regions, setRegions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [settings, setSettings] = useState({ apiKey: "", model: "" });
-  useEffect(() => { getSettings().then(setSettings); }, []);
-  const [showSettings, setShowSettings] = useState(false);
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem("vsg_dark") === "1");
-  const [aiInsight, setAiInsight] = useState(null);
-  const aiRan = useRef(false);
-
-  const [hashRoute, setHashRoute] = useState(() => parseHash());
-  useEffect(() => {
-    const onHash = () => setHashRoute(parseHash());
-    window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
-    localStorage.setItem("vsg_dark", darkMode ? "1" : "0");
-  }, [darkMode]);
-
-  const handleLogin = () => {
-    setAdmin(true);
-    syncEssaysToApi();
-  };
-  const handleLogout = () => { localStorage.removeItem("vsg_admin"); setAdmin(false); };
-
-  useEffect(() => {
-    api.fetchRegions()
-      .then((r) => { setRegions(r); return r; })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    if (!aiRan.current && regions.length > 0 && settings.apiKey) {
-      aiRan.current = true;
-      aiAnalyze(regions, settings).then((t) => t && setAiInsight(t));
-    }
-  }, [regions, settings]);
+function AdminShell({ regions, setRegions, settings, showSettings, setShowSettings, darkMode, setDarkMode, handleLogout, libraryArticles, publicArticles }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const path = location.pathname;
 
   const [hover, setHover] = useState(null);
   const [selected, setSelected] = useState(null);
   const [selectedArticle, setSelectedArticle] = useState(null);
-  const [view, setViewState] = useState(() => hashRoute.route === "bed" ? "bed" : hashRoute.route === "essay" ? "library" : "garden");
-  const [showLogin, setShowLogin] = useState(false);
-  const [libraryArticles, setLibraryArticles] = useState(() => getAllArticles());
-  const [publicArticles, setPublicArticles] = useState([]);
+  const [showAnalysis, setShowAnalysis] = useState(false);
   const [clock, setClock] = useState(new Date());
   useEffect(() => {
     const id = setInterval(() => setClock(new Date()), 15000);
     return () => clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    getPublicArticles().then(setPublicArticles);
-    setLibraryArticles(getAllArticles());
-  }, []);
+  const isGarden = path === "/admin" || path === "/admin/";
+  const bedMatch = path.match(/^\/admin\/bed\/(.+)$/);
+  const isPlan = path === "/admin/plan";
+  const isRoadmap = path === "/admin/roadmap";
+  const isLibrary = path.startsWith("/admin/library");
+  const currentView = isGarden ? "garden" : bedMatch ? "bed" : isPlan ? "plan" : isRoadmap ? "roadmap" : "library";
 
-  useEffect(() => {
-    if (view === "garden") {
-      setLibraryArticles(getAllArticles());
-      getPublicArticles().then(setPublicArticles);
-    }
-  }, [view]);
-
-  const setView = useCallback((v, opts = {}) => {
-    setViewState(v);
-    if (opts.navigate !== false) {
-      if (v === "garden") setHash("/");
-      else if (v === "library" && opts.articleSlug) setHash(`/essay/${opts.articleSlug}`);
-      else if (v === "bed" && opts.bedId) setHash(`/bed/${opts.bedId}`);
-      else setHash(`/${v}`);
-    }
-  }, []);
-
+  const viewBedDetail = (id) => { navigate(`/admin/bed/${id}`); };
   const navigateToArticle = useCallback((article) => {
+    if (!article) { navigate("/admin/library"); return; }
     const slug = slugify(article.title);
-    setHash(`/essay/${slug}`);
-    setSelectedArticle(article);
-    setViewState("library");
-  }, []);
+    navigate(`/admin/library/${slug}`);
+  }, [navigate]);
 
   // Water: phase can be "picking-plant", "picking-fruit", or "logging"
   const [waterPhase, setWaterPhase] = useState("idle");
@@ -163,12 +118,6 @@ export default function App() {
   let timerIdCounter = useRef(0);
 
   const getTimer = (id) => timers.find((t) => t.id === id);
-  const getTimerRegion = (id) => { const t = getTimer(id); return t ? regions.find((r) => r.id === t.regionId) : null; };
-  const getTimerPlant = (id) => {
-    const t = getTimer(id);
-    const region = t ? regions.find((r) => r.id === t.regionId) : null;
-    return region && t?.plantId ? region.plants.find((p) => p.id === t.plantId) : null;
-  };
   const updateTimer = (id, patch) => setTimers((ts) => ts.map((t) => t.id === id ? { ...t, ...patch } : t));
   const removeTimer = (id) => setTimers((ts) => ts.filter((t) => t.id !== id));
 
@@ -260,7 +209,6 @@ export default function App() {
 
   const [bedForm, setBedForm] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
-  const [showAnalysis, setShowAnalysis] = useState(false);
 
   const createBed = async (bed) => {
     try { const saved = await api.createRegion(bed); setRegions((rs) => [...rs, saved]); setBedForm(null); } catch (e) { console.error(e); }
@@ -269,10 +217,8 @@ export default function App() {
     try { const saved = await api.updateRegion(bed.id, bed); applyGrow(saved); setBedForm(null); } catch (e) { console.error(e); }
   };
   const deleteBed = async (id) => {
-    try { await api.deleteRegion(id); setRegions((rs) => rs.filter((r) => r.id !== id)); setSelected(null); setConfirmDelete(null); setView("garden"); } catch (e) { console.error(e); }
+    try { await api.deleteRegion(id); setRegions((rs) => rs.filter((r) => r.id !== id)); setSelected(null); setConfirmDelete(null); navigate("/admin"); } catch (e) { console.error(e); }
   };
-
-  const viewBedDetail = (id) => { setView("bed", { bedId: id }); setSelected(id); };
 
   const nextPlan = useMemo(() => {
     const now = new Date();
@@ -293,31 +239,11 @@ export default function App() {
     return null;
   }, [clock]);
 
-  if (loading) {
-    return <div className="app-min" style={{ display: "grid", placeItems: "center", color: "#6b6455" }}>loading…</div>;
-  }
-
-  if (!admin) {
-    if (showLogin) return <LoginGate onLogin={handleLogin} />;
-    return (
-      <PublicPage
-        onLogin={() => setShowLogin(true)}
-        regions={regions}
-        articles={publicArticles}
-        selectedId={hashRoute.route === "essay" ? publicArticles.find((a) => slugify(a.title) === hashRoute.slug)?.id : null}
-        onSelectArticle={(article) => {
-          if (article) setHash(`/essay/${slugify(article.title)}`);
-          else setHash("/");
-        }}
-      />
-    );
-  }
-
   const NAV = [
-    { id: "garden", icon: "🌱", label: "Garden" },
-    { id: "plan", icon: "📋", label: "Plan" },
-    { id: "roadmap", icon: "🎯", label: "Roadmap" },
-    { id: "library", icon: "📖", label: "Library" },
+    { id: "garden", icon: "🌱", label: "Garden", path: "/admin" },
+    { id: "plan", icon: "📋", label: "Plan", path: "/admin/plan" },
+    { id: "roadmap", icon: "🎯", label: "Roadmap", path: "/admin/roadmap" },
+    { id: "library", icon: "📖", label: "Library", path: "/admin/library" },
   ];
   const thirsty = regions.filter((r) => (Date.now() - new Date(r.lastTs).getTime()) / 864e5 >= 4).length;
   const recent = regions
@@ -330,9 +256,9 @@ export default function App() {
       <aside className="dash-left">
         <nav className="dash-nav">
           {NAV.map((n) => (
-            <button key={n.id} className={view === n.id ? "on" : ""} onClick={() => setView(n.id)} title={n.label}>
+            <Link key={n.id} to={n.path} className={currentView === n.id ? "on" : ""} title={n.label}>
               {n.icon}
-            </button>
+            </Link>
           ))}
           <button className={showSettings ? "on" : ""} onClick={() => setShowSettings(true)} title="Settings">⚙</button>
           <button onClick={() => setDarkMode((d) => !d)} title={darkMode ? "Light mode" : "Dark mode"}>{darkMode ? "☀️" : "🌙"}</button>
@@ -341,7 +267,7 @@ export default function App() {
       </aside>
 
       <main className="dash-main">
-        {view === "garden" ? (
+        {isGarden && (
           <GardenScene
             regions={regions}
             articles={libraryArticles}
@@ -354,23 +280,23 @@ export default function App() {
             onStartTimer={openPicker}
             onSelectArticle={(article) => navigateToArticle(article)}
           />
-        ) : view === "bed" && selected ? (
+        )}
+        {bedMatch && (
           <BedDetailPage
-            region={regions.find((r) => r.id === selected)}
-            onBack={() => setView("garden")}
+            region={regions.find((r) => r.id === bedMatch[1])}
+            onBack={() => navigate("/admin")}
             onUpdate={(updated) => setRegions((rs) => rs.map((r) => r.id === updated.id ? updated : r))}
             onWater={openWater}
             onStartTimer={openPicker}
-            timerRunning={timers.some((t) => t.phase === "countdown" && t.regionId === selected)}
+            timerRunning={timers.some((t) => t.phase === "countdown" && t.regionId === bedMatch[1])}
             onEditBed={(bed) => setBedForm(bed)}
             onDeleteBed={(id) => setConfirmDelete(id)}
           />
-        ) : view === "plan" ? (
-          <PlanView regions={regions} onGrow={grow} />
-        ) : view === "roadmap" ? (
-          <RoadmapView regions={regions} onSelectBed={viewBedDetail} />
-        ) : (
-          <Library regions={regions} selectedId={selectedArticle?.id} onSelectArticle={navigateToArticle} />
+        )}
+        {isPlan && <PlanView regions={regions} onGrow={grow} />}
+        {isRoadmap && <RoadmapView regions={regions} onSelectBed={viewBedDetail} />}
+        {isLibrary && !bedMatch && (
+          <Library regions={regions} />
         )}
       </main>
 
@@ -629,16 +555,76 @@ export default function App() {
             </div>
             <button className="ms-save" onClick={async () => {
               setShowSettings(false);
-              aiRan.current = false;
-              setAiInsight(null);
-              if (settings.apiKey && regions.length) {
-                aiAnalyze(regions, settings).then((t) => t && setAiInsight(t));
-              }
-            }}>Save & Analyze</button>
+            }}>Save</button>
           </div>
         </div>
       )}
       {showAnalysis && <GardenAnalysis regions={regions} onClose={() => setShowAnalysis(false)} />}
     </div>
+  );
+}
+
+export default function App() {
+  const [admin, setAdmin] = useState(() => localStorage.getItem("vsg_admin") === "1");
+  const [regions, setRegions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [settings, setSettings] = useState({ apiKey: "", model: "" });
+  useEffect(() => { getSettings().then(setSettings); }, []);
+  const [showSettings, setShowSettings] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem("vsg_dark") === "1");
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
+    localStorage.setItem("vsg_dark", darkMode ? "1" : "0");
+  }, [darkMode]);
+
+  const handleLogin = () => {
+    setAdmin(true);
+    syncEssaysToApi();
+  };
+  const handleLogout = () => { localStorage.removeItem("vsg_admin"); setAdmin(false); };
+
+  useEffect(() => {
+    api.fetchRegions()
+      .then((r) => { setRegions(r); return r; })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  const [libraryArticles, setLibraryArticles] = useState(() => getAllArticles());
+  const [publicArticles, setPublicArticles] = useState([]);
+
+  useEffect(() => {
+    getPublicArticles().then(setPublicArticles);
+    setLibraryArticles(getAllArticles());
+  }, []);
+
+  if (loading) {
+    return <div className="app-min" style={{ display: "grid", placeItems: "center", color: "#6b6455" }}>loading…</div>;
+  }
+
+  return (
+    <BrowserRouter>
+      {admin ? (
+        <AdminShell
+          regions={regions}
+          setRegions={setRegions}
+          settings={settings}
+          showSettings={showSettings}
+          setShowSettings={setShowSettings}
+          darkMode={darkMode}
+          setDarkMode={setDarkMode}
+          handleLogout={handleLogout}
+          libraryArticles={libraryArticles}
+          publicArticles={publicArticles}
+        />
+      ) : (
+        <PublicRoutes
+          regions={regions}
+          publicArticles={publicArticles}
+          handleLogin={handleLogin}
+        />
+      )}
+    </BrowserRouter>
   );
 }

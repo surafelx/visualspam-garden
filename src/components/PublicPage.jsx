@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { threadById } from "../data.js";
 
 function getBlocks(article) {
@@ -13,24 +14,13 @@ function slugify(text) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-export default function PublicPage({ onLogin, regions = [], articles = [], onSelectArticle = null, selectedId = null }) {
-  const [openId, setOpenId] = useState(() => {
-    if (selectedId) return selectedId;
-    const hash = window.location.hash.slice(1);
-    if (hash.startsWith("/essay/")) {
-      const slug = hash.split("/")[2];
-      const found = articles.find((a) => slugify(a.title) === slug);
-      if (found) return found.id;
-    }
-    return null;
-  });
-  const open = openId ? articles.find((a) => a.id === openId) : null;
+export default function PublicPage({ onLogin, regions = [], articles = [] }) {
+  const { slug } = useParams();
+  const navigate = useNavigate();
+
+  const open = slug ? articles.find((a) => slugify(a.title) === slug) : null;
   const bgAudioRef = useRef(null);
   const [bgPlaying, setBgPlaying] = useState(false);
-
-  useEffect(() => {
-    if (selectedId) setOpenId(selectedId);
-  }, [selectedId]);
 
   useEffect(() => {
     if (open?.bgMusic && bgAudioRef.current) {
@@ -38,15 +28,8 @@ export default function PublicPage({ onLogin, regions = [], articles = [], onSel
     }
   }, [open?.bgMusic]);
 
-  const handleSelectArticle = (article) => {
-    setOpenId(article.id);
-    if (onSelectArticle) onSelectArticle(article);
-  };
-
   const handleBack = () => {
-    setOpenId(null);
-    if (onSelectArticle) onSelectArticle(null);
-    window.location.hash = "/";
+    navigate("/");
   };
 
   return (
@@ -57,8 +40,8 @@ export default function PublicPage({ onLogin, regions = [], articles = [], onSel
       <header className="lp-header">
         <div className="lp-header-inner">
           <div className="lp-brand">
-            <button className="lp-brand-icon" onClick={onLogin} title="garden">🌱</button>
-            <span className="lp-brand-name">VisualSpam Garden</span>
+            <Link to="/" className="lp-brand-icon" title="garden">🌱</Link>
+            <Link to="/" className="lp-brand-name">VisualSpam Garden</Link>
           </div>
         </div>
       </header>
@@ -154,13 +137,13 @@ export default function PublicPage({ onLogin, regions = [], articles = [], onSel
               {articles.map((a) => {
                 const t = threadById[a.thread];
                 return (
-                  <button key={a.id} className="lp-list-item" onClick={() => handleSelectArticle(a)}>
+                  <Link key={a.id} to={`/essay/${slugify(a.title)}`} className="lp-list-item">
                     <span className="lp-list-item-title">{a.title}</span>
                     <span className="lp-list-item-meta">
                       <span className="lp-list-item-dot" style={{ background: t?.color }} />
                       {t?.name} · {a.kind} · {a.minutes} min · {a.dateLabel}
                     </span>
-                  </button>
+                  </Link>
                 );
               })}
             </div>
