@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { articles as seedArticles, threadById, threads, timeAgo, dayKey } from "../data.js";
 import * as api from "../api.js";
+import WritingAnalysis from "./WritingAnalysis.jsx";
 
 const KINDS = ["All", "Essay", "Note", "Log", "Book"];
 
@@ -153,7 +154,7 @@ function BlockEditor({ block, onChange, onRemove }) {
   return null;
 }
 
-function ArticleForm({ onSave, onCancel, initial, regions = [] }) {
+function ArticleForm({ onSave, onCancel, initial, regions = [], onAnalyze = null, showAnalysis = false }) {
   const [title, setTitle] = useState(initial?.title || "");
   const [thread, setThread] = useState(initial?.thread || "philosophy");
   const [kind, setKind] = useState(initial?.kind || "Essay");
@@ -229,6 +230,9 @@ function ArticleForm({ onSave, onCancel, initial, regions = [] }) {
       <div className="lf-editor-bar">
         <button className="lf-back" onClick={onCancel}>← Back</button>
         <div className="lf-editor-bar-actions">
+          {onAnalyze && (
+            <button className={`lf-btn lf-btn-ghost ${showAnalysis ? "on" : ""}`} onClick={onAnalyze}>✍️ Analyze</button>
+          )}
           <button className="lf-btn lf-btn-ghost" onClick={onCancel}>Cancel</button>
           <button className="lf-btn lf-btn-draft" onClick={() => save(true)} disabled={!title.trim()}>Save Draft</button>
           <button className="lf-btn lf-btn-primary" onClick={() => save(false)} disabled={!title.trim()}>Publish</button>
@@ -345,7 +349,7 @@ function ArticleForm({ onSave, onCancel, initial, regions = [] }) {
   );
 }
 
-function ArticleReader({ article, onBack, onEdit, onDelete, regions = [] }) {
+function ArticleReader({ article, onBack, onEdit, onDelete, regions = [], settings = {}, onAnalyze = null }) {
   const t = threadById[article.thread];
   const blocks = getBlocks(article);
   const bgAudioRef = useRef(null);
@@ -381,6 +385,9 @@ function ArticleReader({ article, onBack, onEdit, onDelete, regions = [] }) {
             </button>
           )}
           <button className="lf-btn lf-btn-ghost" onClick={onEdit}>Edit</button>
+          {settings?.apiKey && onAnalyze && (
+            <button className="lf-btn lf-btn-ghost" onClick={onAnalyze}>✍️ Analyze</button>
+          )}
           <button className="lf-btn lf-btn-danger" onClick={onDelete}>Delete</button>
         </div>
       </div>
@@ -499,7 +506,7 @@ function formatDate(dk) {
   return d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
 }
 
-export default function Library({ regions = [] }) {
+export default function Library({ regions = [], settings = {} }) {
   const { slug } = useParams();
   const navigate = useNavigate();
   const [custom, setCustom] = useState(loadCustom);
@@ -510,6 +517,7 @@ export default function Library({ regions = [] }) {
   const [editing, setEditing] = useState(null);
   const [openId, setOpenId] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [showAnalysis, setShowAnalysis] = useState(false);
 
   const allArticles = useMemo(() => {
     const activeSeeds = seedArticles.filter((a) => !deleted.includes(a.id));
@@ -594,7 +602,17 @@ export default function Library({ regions = [] }) {
   if (tab === "editor" || editing) {
     return (
       <div className="library">
-        <ArticleForm onSave={handleSave} onCancel={() => setEditing(null)} initial={editing} regions={regions} />
+        {showAnalysis && editing && (
+          <WritingAnalysis article={editing} settings={settings} onClose={() => setShowAnalysis(false)} />
+        )}
+        <ArticleForm
+          onSave={handleSave}
+          onCancel={() => { setEditing(null); setShowAnalysis(false); }}
+          initial={editing}
+          regions={regions}
+          onAnalyze={() => setShowAnalysis(true)}
+          showAnalysis={showAnalysis}
+        />
       </div>
     );
   }
@@ -607,6 +625,8 @@ export default function Library({ regions = [] }) {
         onEdit={() => { setEditing(open); setOpenId(null); }}
         onDelete={() => setConfirmDelete(openId)}
         regions={regions}
+        settings={settings}
+        onAnalyze={() => { setEditing(open); setOpenId(null); setShowAnalysis(true); }}
       />
     );
   }

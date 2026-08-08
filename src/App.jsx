@@ -296,7 +296,7 @@ function AdminShell({ regions, setRegions, settings, showSettings, setShowSettin
         {isPlan && <PlanView regions={regions} onGrow={grow} />}
         {isRoadmap && <RoadmapView regions={regions} onSelectBed={viewBedDetail} />}
         {isLibrary && !bedMatch && (
-          <Library regions={regions} />
+          <Library regions={regions} settings={settings} />
         )}
       </main>
 
