@@ -31,17 +31,11 @@ export function getAllDrafts() {
 }
 
 export async function getPublicArticles() {
-  const custom = loadCustom();
-  const drafts = loadDrafts();
-  const draftIds = new Set(drafts.map((d) => d.id));
-  const published = custom.filter((a) => !draftIds.has(a.id));
   try {
     const dbEssays = await api.fetchPublicEssays();
-    const dbIds = new Set(dbEssays.map((a) => a.id));
-    const localOnly = published.filter((a) => !dbIds.has(a.id));
-    return [...dbEssays, ...localOnly, ...seedArticles];
+    return dbEssays;
   } catch {
-    return [...published, ...seedArticles];
+    return [];
   }
 }
 

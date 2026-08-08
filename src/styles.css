@@ -1349,7 +1349,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 /* ═══════════════════════════════════════════════════════════════════════ */
 .lp {
   min-height: 100vh; font-family: var(--font); color: #2c2920;
-  background: #faf9f6; position: relative; overflow-x: hidden;
+  background: #faf9f6; position: relative; overflow-x: hidden; overflow-y: auto;
 }
 .lp-border {
   position: fixed; top: 0; bottom: 0; width: 140px; z-index: 0;
