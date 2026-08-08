@@ -124,7 +124,6 @@ export default function PublicPage({ onLogin, regions = [], articles = [] }) {
                   return null;
                 })}
               </div>
-              <button className="lp-reader-login" onClick={onLogin}>Sign in to write →</button>
             </article>
           </div>
         ) : (

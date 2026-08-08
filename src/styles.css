@@ -1357,7 +1357,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: none; ba
 /*  PUBLIC LANDING PAGE                                                   */
 /* ═══════════════════════════════════════════════════════════════════════ */
 .lp {
-  min-height: 100vh; font-family: var(--font); color: #2c2920;
+  height: 100vh; font-family: var(--font); color: #2c2920;
   background: #faf9f6; position: relative; overflow-x: hidden; overflow-y: auto;
 }
 .lp-border {
