@@ -509,6 +509,22 @@ function formatDate(dk) {
 export default function Library({ regions = [], settings = {} }) {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const loadEssays = async () => {
+    try {
+      const dbEssays = await api.fetchEssays();
+      const localIds = new Set(loadCustom().map((a) => a.id));
+      const localDraftIds = new Set(loadDrafts().map((a) => a.id));
+      const newFromDb = dbEssays.filter((a) => !localIds.has(a.id) && !localDraftIds.has(a.id));
+      if (newFromDb.length > 0) {
+        const merged = [...newFromDb, ...loadCustom()];
+        saveCustom(merged);
+        setCustom(merged);
+      }
+    } catch { /* offline is fine, use localStorage */ }
+  };
+
+  useEffect(() => { loadEssays(); }, []);
+
   const [custom, setCustom] = useState(loadCustom);
   const [drafts, setDrafts] = useState(loadDrafts);
   const [deleted, setDeleted] = useState(loadDeleted);
