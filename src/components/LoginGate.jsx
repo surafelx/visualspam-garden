@@ -1,16 +1,19 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const ADMIN_PASS = "garden2025";
 
 export default function LoginGate({ onLogin }) {
   const [pass, setPass] = useState("");
   const [error, setError] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (pass === ADMIN_PASS) {
       localStorage.setItem("vsg_admin", "1");
       onLogin();
+      navigate("/admin", { replace: true });
     } else {
       setError(true);
       setPass("");
@@ -22,7 +25,7 @@ export default function LoginGate({ onLogin }) {
     <div className="login-page">
       <div className="login-card">
         <div className="login-icon">🌱</div>
-        <h1 className="login-title">VisualSpam Garden</h1>
+        <h1 className="login-title">Garden</h1>
         <p className="login-sub">Admin access</p>
         <form className="login-form" onSubmit={handleSubmit}>
           <input

@@ -43,4 +43,14 @@ router.delete("/:id", w(async (req, res) => {
   res.json({ ok: true });
 }));
 
+router.post("/:id/reactions", w(async (req, res) => {
+  const { emoji } = req.body;
+  const essay = await Essay.findOne({ id: req.params.id });
+  if (!essay) return res.status(404).json({ error: "not found" });
+  const current = essay.reactions?.get(emoji) || 0;
+  essay.reactions.set(emoji, current + 1);
+  await essay.save();
+  res.json(essay);
+}));
+
 export default router;

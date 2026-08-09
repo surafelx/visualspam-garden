@@ -32,6 +32,16 @@ export const fetchPublicEssays = () => request("/essays/public");
 export const createEssay = (data) => request("/essays", { method: "POST", body: data });
 export const updateEssay = (id, data) => request(`/essays/${id}`, { method: "PUT", body: data });
 export const deleteEssay = (id) => request(`/essays/${id}`, { method: "DELETE" });
+export const addReaction = (essayId, emoji) => request(`/essays/${essayId}/reactions`, { method: "POST", body: { emoji } });
+
+// ── Comments ──
+export const fetchComments = (essayId) => request(`/comments/${essayId}`);
+export const createComment = (data) => request("/comments", { method: "POST", body: data });
+
+// ── Messages ──
+export const fetchMessages = () => request("/messages");
+export const createMessage = (data) => request("/messages", { method: "POST", body: data });
+export const markMessageRead = (id) => request(`/messages/${id}`, { method: "PUT", body: { read: true } });
 
 // ── Local Garden Analysis (no API needed) ──
 export function analyzeAll(regions) {

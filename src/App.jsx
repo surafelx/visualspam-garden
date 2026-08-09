@@ -57,7 +57,6 @@ const aiAnalyze = async (regions, settings) => {
 function PublicRoutes({ regions, publicArticles, handleLogin }) {
   return (
     <Routes>
-      <Route path="/login" element={<LoginGate onLogin={handleLogin} />} />
       <Route path="/essay/:slug" element={
         <PublicPage
           onLogin={() => window.location.href = "/login"}
@@ -625,26 +624,31 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      {admin ? (
-        <AdminShell
-          regions={regions}
-          setRegions={setRegions}
-          settings={settings}
-          showSettings={showSettings}
-          setShowSettings={setShowSettings}
-          darkMode={darkMode}
-          setDarkMode={setDarkMode}
-          handleLogout={handleLogout}
-          libraryArticles={libraryArticles}
-          publicArticles={publicArticles}
-        />
-      ) : (
-        <PublicRoutes
-          regions={regions}
-          publicArticles={publicArticles}
-          handleLogin={handleLogin}
-        />
-      )}
+      <Routes>
+        <Route path="/login" element={<LoginGate onLogin={handleLogin} />} />
+        <Route path="*" element={
+          admin ? (
+            <AdminShell
+              regions={regions}
+              setRegions={setRegions}
+              settings={settings}
+              showSettings={showSettings}
+              setShowSettings={setShowSettings}
+              darkMode={darkMode}
+              setDarkMode={setDarkMode}
+              handleLogout={handleLogout}
+              libraryArticles={libraryArticles}
+              publicArticles={publicArticles}
+            />
+          ) : (
+            <PublicRoutes
+              regions={regions}
+              publicArticles={publicArticles}
+              handleLogin={handleLogin}
+            />
+          )
+        } />
+      </Routes>
     </BrowserRouter>
   );
 }

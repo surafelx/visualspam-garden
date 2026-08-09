@@ -23,6 +23,7 @@ const essaySchema = new mongoose.Schema({
   regionId: { type: String, default: null },
   plantId: { type: String, default: null },
   fruitId: { type: String, default: null },
+  reactions: { type: Map, of: Number, default: {} },
 }, { timestamps: true });
 
 export default mongoose.model("Essay", essaySchema);

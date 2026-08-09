@@ -7,6 +7,8 @@ import { fileURLToPath } from "url";
 import regionsRouter from "./routes/regions.js";
 import checkinsRouter from "./routes/checkins.js";
 import essaysRouter from "./routes/essays.js";
+import commentsRouter from "./routes/comments.js";
+import messagesRouter from "./routes/messages.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -19,6 +21,8 @@ app.use(express.json());
 app.use("/api/regions", regionsRouter);
 app.use("/api/checkins", checkinsRouter);
 app.use("/api/essays", essaysRouter);
+app.use("/api/comments", commentsRouter);
+app.use("/api/messages", messagesRouter);
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 
 // In production, serve the built client. Checks both ../dist (monorepo) and
