@@ -9,8 +9,17 @@ router.get("/:essayId", w(async (req, res) => {
   res.json(comments);
 }));
 
+// Public write endpoint: only accept the fields we expect, and cap their size.
 router.post("/", w(async (req, res) => {
-  const comment = await Comment.create(req.body);
+  const { essayId, author, content } = req.body || {};
+  if (!essayId || !content || !String(content).trim()) {
+    return res.status(400).json({ error: "essayId and content are required" });
+  }
+  const comment = await Comment.create({
+    essayId: String(essayId).slice(0, 200),
+    author: String(author || "Anonymous").trim().slice(0, 60) || "Anonymous",
+    content: String(content).trim().slice(0, 4000),
+  });
   res.status(201).json(comment);
 }));
 

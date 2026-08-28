@@ -43,12 +43,19 @@ router.delete("/:id", w(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// Anyone can react, so only the known emoji are accepted — arbitrary keys would
+// let a caller write junk into the reactions Map (and "." / "$" break Mongo).
+const ALLOWED_REACTIONS = ["❤️", "👍", "🌱", "✨", "🔥"];
+
 router.post("/:id/reactions", w(async (req, res) => {
-  const { emoji } = req.body;
+  const { emoji } = req.body || {};
+  if (!ALLOWED_REACTIONS.includes(emoji)) {
+    return res.status(400).json({ error: "unknown reaction" });
+  }
   const essay = await Essay.findOne({ id: req.params.id });
   if (!essay) return res.status(404).json({ error: "not found" });
-  const current = essay.reactions?.get(emoji) || 0;
-  essay.reactions.set(emoji, current + 1);
+  if (!essay.reactions) essay.reactions = new Map();
+  essay.reactions.set(emoji, (essay.reactions.get(emoji) || 0) + 1);
   await essay.save();
   res.json(essay);
 }));

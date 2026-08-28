@@ -4,23 +4,6 @@ import { PixelSprite } from "../pixels.jsx";
 
 const DAY_MS = 864e5;
 
-function getDueFruits(regions) {
-  const now = Date.now();
-  const items = [];
-  for (const r of regions) {
-    for (const p of r.plants || []) {
-      for (const f of p.fruits || []) {
-        if (!f.deadline || f.done) continue;
-        const dl = new Date(f.deadline).getTime();
-        const diff = dl - now;
-        if (diff < 0) items.push({ id: f.id, title: f.title || "Untitled", bed: r.label, bedId: r.id, type: "overdue" });
-        else if (diff < 3 * DAY_MS) items.push({ id: f.id, title: f.title || "Untitled", bed: r.label, bedId: r.id, type: "soon" });
-      }
-    }
-  }
-  return items;
-}
-
 function BedCard({ region, onSelect, onStartTimer, onWater, hasTimer }) {
   const t = threadById[region.thread];
   const thirsty = needsWater(region.lastTs);
@@ -28,11 +11,20 @@ function BedCard({ region, onSelect, onStartTimer, onWater, hasTimer }) {
   const pendingFruits = plants.reduce((n, p) => n + (p.fruits || []).filter((f) => !f.done).length, 0);
   const doneFruits = plants.reduce((n, p) => n + (p.fruits || []).filter((f) => f.done).length, 0);
   const watered = (region.logs || []).filter((l) => l.type === "water").length;
-  const spriteSize = 38;
+  const spriteSize = 28;
   const count = plants.length > 0 ? Math.min(plants.length, 5) : 1;
 
   return (
-    <button className="g-card" style={{ "--rc": t?.color }} onClick={() => onSelect(region.id)}>
+    <div
+      className="g-card"
+      style={{ "--rc": t?.color }}
+      role="button"
+      tabIndex={0}
+      onClick={() => onSelect(region.id)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(region.id); }
+      }}
+    >
       {thirsty && <span className="g-card-thirst">💧</span>}
       {hasTimer && <span className="g-card-thirst" style={{ right: thirsty ? 32 : 12 }}>☀️</span>}
       <div className="g-card-top">
@@ -61,7 +53,36 @@ function BedCard({ region, onSelect, onStartTimer, onWater, hasTimer }) {
           ☀️
         </button>
       </div>
-    </button>
+    </div>
+  );
+}
+
+// The overdue list ran to dozens of items and dominated the dashboard. Show the
+// count, and let it open on click.
+export function DueAlert({ kind, icon, label, items }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={`g-due-alert g-due-${kind} ${open ? "open" : ""}`}>
+      <button
+        className="g-due-toggle"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+      >
+        <span className="g-due-icon" aria-hidden="true">{icon}</span>
+        <span className="g-due-count">{items.length} {label}</span>
+        <span className="g-due-caret" aria-hidden="true">{open ? "−" : "+"}</span>
+      </button>
+      {open && (
+        <ul className="g-due-list">
+          {items.map((f, i) => (
+            <li key={i}>
+              <span className="g-due-item-title">{f.title}</span>
+              {f.note && <> · {f.note}</>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -75,9 +96,6 @@ export default function GardenScene({ regions, articles = [], hover, selected, t
     return n + (r.plants || []).reduce((s, p) => s + (p.fruits || []).filter((f) => !f.done).length, 0);
   }, 0);
 
-  const dueFruits = getDueFruits(regions);
-  const overdue = dueFruits.filter((f) => f.type === "overdue");
-  const dueSoon = dueFruits.filter((f) => f.type === "soon");
 
   const [clock, setClock] = useState(new Date());
   useEffect(() => { const id = setInterval(() => setClock(new Date()), 1000); return () => clearInterval(id); }, []);
@@ -146,27 +164,6 @@ export default function GardenScene({ regions, articles = [], hover, selected, t
         )}
       </div>
 
-      {(overdue.length > 0 || dueSoon.length > 0) && (
-        <div className="g-due-alerts">
-          {overdue.length > 0 && (
-            <div className="g-due-alert g-due-overdue">
-              <span className="g-due-icon">⚠</span>
-              <span className="g-due-text">
-                {overdue.length} overdue: {overdue.map((f) => `${f.title} · ${f.bed}`).join(", ")}
-              </span>
-            </div>
-          )}
-          {dueSoon.length > 0 && (
-            <div className="g-due-alert g-due-soon">
-              <span className="g-due-icon">⏰</span>
-              <span className="g-due-text">
-                {dueSoon.length} due soon: {dueSoon.map((f) => `${f.title} · ${f.bed}`).join(", ")}
-              </span>
-            </div>
-          )}
-        </div>
-      )}
-
       <div className="g-grid">
         {regions.map((r) => (
           <BedCard key={r.id} region={r} onSelect={onSelect} onStartTimer={onStartTimer} onWater={onWater} hasTimer={timerIds.includes(r.id)} />
@@ -184,7 +181,6 @@ export default function GardenScene({ regions, articles = [], hover, selected, t
               const t = threadById[a.thread];
               return (
                 <button key={a.id} className="g-entry-card" onClick={() => onSelectArticle(a)}>
-                  <div className="g-entry-accent" style={{ background: t?.color }} />
                   <div className="g-entry-body">
                     <span className="g-entry-kind">{a.kind}</span>
                     <h3 className="g-entry-title">{a.title}</h3>

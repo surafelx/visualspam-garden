@@ -1,0 +1,4 @@
+# SPA fallback: every path that is not a real file renders index.html so that
+# deep links like /essay/<slug> work on refresh and when shared.
+/api/*  /api/:splat  200
+/*      /index.html  200

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import Region from "../models/Region.js";
+import { broadcast } from "../lib/broadcast.js";
 
 const router = Router();
 const w = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -19,6 +20,7 @@ router.get("/:id", w(async (req, res) => {
 
 router.post("/", w(async (req, res) => {
   const region = await Region.create(req.body);
+  broadcast("region:created", region);
   res.status(201).json(region);
 }));
 
@@ -29,12 +31,14 @@ router.put("/:id", w(async (req, res) => {
     { new: true, runValidators: true }
   );
   if (!region) return res.status(404).json({ error: "not found" });
+  broadcast("region:updated", region);
   res.json(region);
 }));
 
 router.delete("/:id", w(async (req, res) => {
   const region = await Region.findOneAndDelete({ id: req.params.id });
   if (!region) return res.status(404).json({ error: "not found" });
+  broadcast("region:deleted", { id: req.params.id });
   res.json({ ok: true });
 }));
 
@@ -46,6 +50,7 @@ router.post("/:id/plants", w(async (req, res) => {
   if (!region.plants) region.plants = [];
   region.plants.push(plant);
   await region.save();
+  broadcast("region:updated", region);
   res.status(201).json(region);
 }));
 
@@ -56,6 +61,7 @@ router.put("/:id/plants/:plantId", w(async (req, res) => {
   if (!plant) return res.status(404).json({ error: "plant not found" });
   Object.assign(plant, req.body);
   await region.save();
+  broadcast("region:updated", region);
   res.json(region);
 }));
 
@@ -64,6 +70,7 @@ router.delete("/:id/plants/:plantId", w(async (req, res) => {
   if (!region) return res.status(404).json({ error: "not found" });
   region.plants = (region.plants || []).filter((p) => p.id !== req.params.plantId);
   await region.save();
+  broadcast("region:updated", region);
   res.json(region);
 }));
 
@@ -77,6 +84,7 @@ router.post("/:id/plants/:plantId/fruits", w(async (req, res) => {
   if (!plant.fruits) plant.fruits = [];
   plant.fruits.push(fruit);
   await region.save();
+  broadcast("region:updated", region);
   res.status(201).json(region);
 }));
 
@@ -89,6 +97,7 @@ router.put("/:id/plants/:plantId/fruits/:fruitId", w(async (req, res) => {
   if (!fruit) return res.status(404).json({ error: "fruit not found" });
   Object.assign(fruit, req.body);
   await region.save();
+  broadcast("region:updated", region);
   res.json(region);
 }));
 
@@ -99,6 +108,7 @@ router.delete("/:id/plants/:plantId/fruits/:fruitId", w(async (req, res) => {
   if (!plant) return res.status(404).json({ error: "plant not found" });
   plant.fruits = (plant.fruits || []).filter((f) => f.id !== req.params.fruitId);
   await region.save();
+  broadcast("region:updated", region);
   res.json(region);
 }));
 

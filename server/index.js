@@ -9,6 +9,7 @@ import checkinsRouter from "./routes/checkins.js";
 import essaysRouter from "./routes/essays.js";
 import commentsRouter from "./routes/comments.js";
 import messagesRouter from "./routes/messages.js";
+import { addClient, removeClient } from "./lib/broadcast.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -25,6 +26,22 @@ app.use("/api/comments", commentsRouter);
 app.use("/api/messages", messagesRouter);
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 
+// ── SSE live sync ──
+app.get("/api/events", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  const clientId = addClient(res);
+  // Comment-only heartbeat: proxies and load balancers close idle streams.
+  const ping = setInterval(() => res.write(": ping\n\n"), 25000);
+  req.on("close", () => {
+    clearInterval(ping);
+    removeClient(clientId);
+  });
+});
+
 // In production, serve the built client. Checks both ../dist (monorepo) and
 // ./dist (independent server deployment). Set SERVE_CLIENT=false to skip.
 const serveClient = process.env.SERVE_CLIENT !== "false";
@@ -32,9 +49,19 @@ const clientDist = fs.existsSync(path.join(__dirname, "dist"))
   ? path.join(__dirname, "dist")
   : path.join(__dirname, "..", "dist");
 
-if (serveClient && fs.existsSync(clientDist)) {
-  app.use(express.static(clientDist));
-  app.get(/^(?!\/api).*/, (req, res) => res.sendFile(path.join(clientDist, "index.html")));
+if (serveClient) {
+  if (fs.existsSync(path.join(clientDist, "index.html"))) {
+    app.use(express.static(clientDist));
+    // SPA fallback: /essay/<slug> and friends are client routes, not files, so
+    // a direct hit or a refresh has to be answered with index.html.
+    app.get(/^(?!\/api).*/, (req, res) => res.sendFile(path.join(clientDist, "index.html")));
+  } else {
+    // Without this the server answers 404 for every page, which looks like a
+    // routing bug rather than a missing build.
+    console.warn(
+      `No client build at ${clientDist} — run "npm run build", or set SERVE_CLIENT=false for API-only hosting.`
+    );
+  }
 }
 
 // Global error handler — never leave a request hanging on a bad payload.

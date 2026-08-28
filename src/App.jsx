@@ -5,6 +5,7 @@ import { encryptText, decryptText } from "./crypto.js";
 
 const FEED_ICON = { water: "💧", note: "✎", grow: "🌸", sun: "☀️", checkin: "🌱" };
 import * as api from "./api.js";
+import { enqueue } from "./lib/apiQueue.js";
 import GardenScene from "./components/GardenScene.jsx";
 import Library, { getAllArticles, getPublicArticles, syncEssaysToApi } from "./components/Library.jsx";
 import PlanView from "./components/PlanView.jsx";
@@ -54,23 +55,21 @@ const aiAnalyze = async (regions, settings) => {
   } catch { return null; }
 };
 
-function PublicRoutes({ regions, publicArticles, handleLogin }) {
+function PublicRoutes({ regions, publicArticles, darkMode, setDarkMode }) {
+  // Both the index and a single essay are the same component; it reads the
+  // slug from the route itself.
+  const page = (
+    <PublicPage
+      regions={regions}
+      articles={publicArticles}
+      darkMode={darkMode}
+      setDarkMode={setDarkMode}
+    />
+  );
   return (
     <Routes>
-      <Route path="/essay/:slug" element={
-        <PublicPage
-          onLogin={() => window.location.href = "/login"}
-          regions={regions}
-          articles={publicArticles}
-        />
-      } />
-      <Route path="*" element={
-        <PublicPage
-          onLogin={() => window.location.href = "/login"}
-          regions={regions}
-          articles={publicArticles}
-        />
-      } />
+      <Route path="/essay/:slug" element={page} />
+      <Route path="*" element={page} />
     </Routes>
   );
 }
@@ -84,6 +83,8 @@ function AdminShell({ regions, setRegions, settings, showSettings, setShowSettin
   const [selected, setSelected] = useState(null);
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [showAnalysis, setShowAnalysis] = useState(false);
+  const [expandedBeds, setExpandedBeds] = useState({});
+  const toggleBed = (id) => setExpandedBeds((m) => ({ ...m, [id]: !m[id] }));
   const [clock, setClock] = useState(new Date());
   useEffect(() => {
     const id = setInterval(() => setClock(new Date()), 15000);
@@ -125,18 +126,23 @@ function AdminShell({ regions, setRegions, settings, showSettings, setShowSettin
   };
 
   const grow = async (id, log, extra = {}) => {
+    let updatedRegion;
     setRegions((rs) => {
       const region = rs.find((r) => r.id === id);
       if (!region) return rs;
       const nowIso = new Date().toISOString();
       const logs = [{ ts: nowIso, ...log }, ...region.logs];
       const extraData = typeof extra === "function" ? extra(region) : extra;
-      const updated = { ...region, logs, tended: region.tended + 1, lastTs: nowIso, ...extraData };
-      api.updateRegion(id, updated).then((saved) => {
-        setRegions((prev) => prev.map((r) => r.id === saved.id ? saved : r));
-      }).catch(console.error);
-      return rs.map((r) => r.id === id ? updated : r);
+      updatedRegion = { ...region, logs, tended: region.tended + 1, lastTs: nowIso, ...extraData };
+      return rs.map((r) => r.id === id ? updatedRegion : r);
     });
+    if (updatedRegion) {
+      enqueue("updateRegion", id, updatedRegion)
+        .then((saved) => {
+          setRegions((prev) => prev.map((r) => r.id === saved.id ? saved : r));
+        })
+        .catch((err) => console.error("failed to save region", id, err));
+    }
   };
 
   // ── Water flow ──
@@ -259,9 +265,11 @@ function AdminShell({ regions, setRegions, settings, showSettings, setShowSettin
               {n.icon}
             </Link>
           ))}
-          <button className={showSettings ? "on" : ""} onClick={() => setShowSettings(true)} title="Settings">⚙</button>
-          <button onClick={() => setDarkMode((d) => !d)} title={darkMode ? "Light mode" : "Dark mode"}>{darkMode ? "☀️" : "🌙"}</button>
-          <button onClick={handleLogout} title="Logout" className="nav-logout">⏻</button>
+          <div className="dash-nav-utils">
+            <button className={showSettings ? "on" : ""} onClick={() => setShowSettings(true)} title="Settings">⚙</button>
+            <button onClick={() => setDarkMode((d) => !d)} title={darkMode ? "Light mode" : "Dark mode"}>{darkMode ? "☀️" : "🌙"}</button>
+            <button onClick={handleLogout} title="Logout" className="nav-logout">⏻</button>
+          </div>
         </nav>
       </aside>
 
@@ -349,9 +357,21 @@ function AdminShell({ regions, setRegions, settings, showSettings, setShowSettin
                     <b>{r.label}</b>
                     <span className="bed-rail-stage">{t?.icon} {t?.label}</span>
                   </span>
-                  {plants.length > 0 && <span className="bed-rail-count">{plants.length}🌱</span>}
+                  {plants.length > 0 && (
+                    /* the plant list is collapsed by default; opening it must not
+                       also navigate into the bed */
+                    <button
+                      className="bed-rail-toggle"
+                      onClick={(e) => { e.stopPropagation(); toggleBed(r.id); }}
+                      aria-expanded={!!expandedBeds[r.id]}
+                      title={expandedBeds[r.id] ? "Hide plants" : "Show plants"}
+                    >
+                      <span className="bed-rail-count">{plants.length}🌱</span>
+                      <span className="bed-rail-caret">{expandedBeds[r.id] ? "−" : "+"}</span>
+                    </button>
+                  )}
                 </div>
-                {plants.length > 0 && (
+                {plants.length > 0 && expandedBeds[r.id] && (
                   <ul className="bed-rail-plants">
                     {plants.map((p) => {
                       const pFruits = (p.fruits || []).filter((f) => !f.done);
@@ -590,12 +610,27 @@ export default function App() {
   const [settings, setSettings] = useState({ apiKey: "", model: "" });
   useEffect(() => { getSettings().then(setSettings); }, []);
   const [showSettings, setShowSettings] = useState(false);
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem("vsg_dark") === "1");
+  const [darkMode, setDarkMode] = useState(() => {
+    const stored = localStorage.getItem("vsg_dark");
+    if (stored !== null) return stored === "1";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
     localStorage.setItem("vsg_dark", darkMode ? "1" : "0");
   }, [darkMode]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = (e) => {
+      if (localStorage.getItem("vsg_dark") === null) {
+        setDarkMode(e.matches);
+      }
+    };
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   const handleLogin = () => {
     setAdmin(true);
@@ -608,6 +643,24 @@ export default function App() {
       .then((r) => { setRegions(r); return r; })
       .catch(console.error)
       .finally(() => setLoading(false));
+  }, []);
+
+  // ── SSE live sync ──
+  useEffect(() => {
+    const es = new EventSource(`${import.meta.env.DEV ? "http://localhost:4000" : ""}/api/events`);
+    es.addEventListener("region:created", (e) => {
+      const region = JSON.parse(e.data);
+      setRegions((prev) => [...prev, region]);
+    });
+    es.addEventListener("region:updated", (e) => {
+      const region = JSON.parse(e.data);
+      setRegions((prev) => prev.map((r) => r.id === region.id ? region : r));
+    });
+    es.addEventListener("region:deleted", (e) => {
+      const { id } = JSON.parse(e.data);
+      setRegions((prev) => prev.filter((r) => r.id !== id));
+    });
+    return () => es.close();
   }, []);
 
   const [libraryArticles, setLibraryArticles] = useState(() => getAllArticles());
@@ -625,29 +678,46 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<LoginGate onLogin={handleLogin} />} />
-        <Route path="*" element={
-          admin ? (
-            <AdminShell
-              regions={regions}
-              setRegions={setRegions}
-              settings={settings}
-              showSettings={showSettings}
-              setShowSettings={setShowSettings}
-              darkMode={darkMode}
-              setDarkMode={setDarkMode}
-              handleLogout={handleLogout}
-              libraryArticles={libraryArticles}
-              publicArticles={publicArticles}
-            />
-          ) : (
+        <Route
+          path="/login"
+          element={admin ? <Navigate to="/admin" replace /> : <LoginGate onLogin={handleLogin} />}
+        />
+        {/* The admin app lives under /admin. Signed out, it sends you to the
+            login screen instead of quietly rendering the public site. */}
+        <Route
+          path="/admin/*"
+          element={
+            admin ? (
+              <AdminShell
+                regions={regions}
+                setRegions={setRegions}
+                settings={settings}
+                showSettings={showSettings}
+                setShowSettings={setShowSettings}
+                darkMode={darkMode}
+                setDarkMode={setDarkMode}
+                handleLogout={handleLogout}
+                libraryArticles={libraryArticles}
+                publicArticles={publicArticles}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        {/* Everything else is the public site, signed in or not — being logged
+            in used to replace the whole site with the admin shell. */}
+        <Route
+          path="*"
+          element={
             <PublicRoutes
               regions={regions}
               publicArticles={publicArticles}
-              handleLogin={handleLogin}
+              darkMode={darkMode}
+              setDarkMode={setDarkMode}
             />
-          )
-        } />
+          }
+        />
       </Routes>
     </BrowserRouter>
   );

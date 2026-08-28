@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { threadById } from "../data.js";
+import { DueAlert } from "./GardenScene.jsx";
 
 const DAY_MS = 864e5;
 
@@ -87,20 +88,20 @@ export default function RoadmapView({ regions, onSelectBed }) {
       {(overdue.length > 0 || dueSoon.length > 0) && (
         <div className="roadmap-alerts">
           {overdue.length > 0 && (
-            <div className="roadmap-alert roadmap-alert-overdue">
-              <span className="roadmap-alert-icon">⚠</span>
-              <span className="roadmap-alert-text">
-                {overdue.length} overdue: {overdue.map((f) => `${f.fruit} in ${f.bed}`).join(", ")}
-              </span>
-            </div>
+            <DueAlert
+              kind="overdue"
+              icon="⚠"
+              label="overdue"
+              items={overdue.map((f) => ({ title: f.fruit, note: f.bed }))}
+            />
           )}
           {dueSoon.length > 0 && (
-            <div className="roadmap-alert roadmap-alert-soon">
-              <span className="roadmap-alert-icon">⏰</span>
-              <span className="roadmap-alert-text">
-                {dueSoon.length} due soon: {dueSoon.map((f) => `${f.fruit} · ${fmtShort(new Date(f.deadline))}`).join(", ")}
-              </span>
-            </div>
+            <DueAlert
+              kind="soon"
+              icon="⏰"
+              label="due soon"
+              items={dueSoon.map((f) => ({ title: f.fruit, note: fmtShort(new Date(f.deadline)) }))}
+            />
           )}
         </div>
       )}

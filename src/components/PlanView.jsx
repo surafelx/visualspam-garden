@@ -253,7 +253,10 @@ function DayPlanner({ regions, date, onLogSunshine }) {
   );
 }
 
-function WeekPlanner({ regions, weekStart, onLogSunshine }) {
+// A week is an overview, not seven stacked day planners. Rendering a full
+// 24-hour DayPlanner per column gave every day its own scrollbar and repeated
+// the hour ruler seven times; at this width the times clipped to "00:0".
+function WeekPlanner({ regions, weekStart, onPickDay }) {
   const days = useMemo(() => {
     const arr = [];
     for (let i = 0; i < 7; i++) {
@@ -264,13 +267,73 @@ function WeekPlanner({ regions, weekStart, onLogSunshine }) {
     return arr;
   }, [weekStart]);
 
+  const byId = useMemo(() => Object.fromEntries(regions.map((r) => [r.id, r])), [regions]);
+  const allFruits = useMemo(() => getAllFruits(regions), [regions]);
+  const todayKey = dateKey(new Date());
+
+  const week = days.map((d) => {
+    const dk = dateKey(d);
+    const slots = loadPlan(`vsg_schedule_${dk}`);
+    const items = Object.entries(slots)
+      .flatMap(([h, tasks]) =>
+        (Array.isArray(tasks) ? tasks : [])
+          .filter((t) => t && (t.bedId || (t.text && t.text.trim())))
+          .map((t) => ({ ...t, hour: Number(h) }))
+      )
+      .sort((a, b) => a.hour - b.hour);
+    return { date: d, dk, items, fruits: allFruits.filter((f) => f.dateKey === dk) };
+  });
+
+  const planned = week.reduce((n, d) => n + d.items.length, 0);
+  const last = days[6];
+
   return (
     <div className="plan-week">
-      {days.map((d) => (
-        <div key={dateKey(d)} className="plan-week-day">
-          <DayPlanner regions={regions} date={d} onLogSunshine={onLogSunshine} />
-        </div>
-      ))}
+      <div className="plan-day-header">
+        <span className="plan-day-label">
+          {MONTH_NAMES[weekStart.getMonth()].slice(0, 3)} {weekStart.getDate()} — {MONTH_NAMES[last.getMonth()].slice(0, 3)} {last.getDate()}
+        </span>
+        <span className="plan-day-count">{planned} planned</span>
+      </div>
+
+      <div className="plan-week-grid">
+        {week.map(({ date, dk, items, fruits }) => (
+          <button
+            key={dk}
+            className={`plan-week-day ${dk === todayKey ? "today" : ""}`}
+            onClick={() => onPickDay(date)}
+            title={`Open ${DAY_NAMES[date.getDay()]} ${date.getDate()}`}
+          >
+            <span className="plan-week-head">
+              <span className="plan-week-name">{DAY_NAMES[date.getDay()]}</span>
+              <span className="plan-week-date">{date.getDate()}</span>
+            </span>
+
+            <span className="plan-week-items">
+              {items.map((t, i) => {
+                const bed = t.bedId ? byId[t.bedId] : null;
+                const thread = bed ? threadById[bed.thread] : null;
+                return (
+                  <span key={i} className="plan-week-item">
+                    <span className="plan-week-hour">{fmtHour(t.hour)}</span>
+                    {thread && <span className="plan-dot" style={{ background: thread.color }} />}
+                    <span className="plan-week-text">{bed ? bed.label : t.text}</span>
+                  </span>
+                );
+              })}
+              {fruits.map((f) => (
+                <span key={f.id} className="plan-week-item plan-week-fruit">
+                  <span className="plan-week-hour">due</span>
+                  <span className="plan-week-text">{f.title}</span>
+                </span>
+              ))}
+              {items.length === 0 && fruits.length === 0 && (
+                <span className="plan-week-none">—</span>
+              )}
+            </span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -281,6 +344,8 @@ function MonthPlanner({ regions, year, month, onLogSunshine }) {
   const cells = [];
   for (let i = 0; i < firstDay; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  // pad out the final week so the grid's rules close instead of stopping mid-row
+  while (cells.length % 7 !== 0) cells.push(null);
 
   const allFruits = useMemo(() => getAllFruits(regions), [regions]);
   const monthFruits = useMemo(() => {
@@ -295,8 +360,23 @@ function MonthPlanner({ regions, year, month, onLogSunshine }) {
 
   const [selectedDay, setSelectedDay] = useState(null);
 
+  const monthFruitCount = useMemo(
+    () => allFruits.filter((f) => {
+      const d = new Date(f.deadline);
+      return d.getFullYear() === year && d.getMonth() === month;
+    }).length,
+    [allFruits, year, month]
+  );
+
   return (
     <div className="plan-month">
+      {/* the grid had no month or year on it at all */}
+      <div className="plan-day-header">
+        <span className="plan-day-label">{MONTH_NAMES[month]} {year}</span>
+        <span className="plan-day-count">
+          {monthFruitCount} due
+        </span>
+      </div>
       <div className="plan-month-grid">
         {DAY_SHORT.map((dn, i) => <div key={i} className="plan-month-header">{dn}</div>)}
         {cells.map((day, i) => {
@@ -338,6 +418,8 @@ function TrackView({ regions }) {
   const cells = [];
   for (let i = 0; i < firstDay; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  // pad the final week so the grid's rules close instead of stopping mid-row
+  while (cells.length % 7 !== 0) cells.push(null);
 
   const fruitByDay = useMemo(() => {
     const map = {};
@@ -495,7 +577,11 @@ export default function PlanView({ regions, onGrow }) {
             <DayPlanner regions={regions} date={viewDate} onLogSunshine={onLogSunshine} />
           )}
           {planTab === "week" && (
-            <WeekPlanner regions={regions} weekStart={weekStart} onLogSunshine={onLogSunshine} />
+            <WeekPlanner
+              regions={regions}
+              weekStart={weekStart}
+              onPickDay={(d) => { setViewDate(d); setPlanTab("day"); }}
+            />
           )}
           {planTab === "month" && (
             <MonthPlanner regions={regions} year={monthYear.year} month={monthYear.month} onLogSunshine={onLogSunshine} />
