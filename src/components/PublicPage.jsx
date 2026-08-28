@@ -2,6 +2,7 @@ import { Fragment, useState, useRef, useEffect, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { threadById, timeAgo } from "../data.js";
 import * as api from "../api.js";
+import { renderText } from "../lib/markdown.jsx";
 
 const REACTIONS = ["❤️", "👍", "🌱", "✨", "🔥"];
 const REACTED_KEY = "vsg_reacted";
@@ -225,10 +226,9 @@ function EssayReader({ open, onBack }) {
         <div className="lp-reader-body">
           {blocks.map((block, i) => {
             if (!block.type || block.type === "text") {
-              const lines = (block.content || "").split("\n");
               return (
                 <p key={i} className={i === firstTextIndex ? "lp-lede" : undefined}>
-                  {lines.map((line, li) => <span key={li}>{li > 0 && <br />}{line}</span>)}
+                  {renderText(block.content, `b${i}`)}
                 </p>
               );
             }

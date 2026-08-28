@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { articles as seedArticles, threadById, threads, timeAgo, dayKey } from "../data.js";
 import * as api from "../api.js";
 import WritingAnalysis from "./WritingAnalysis.jsx";
+import { renderText, MARKS, applyMark } from "../lib/markdown.jsx";
 
 const KINDS = ["All", "Essay", "Note", "Log", "Book"];
 
@@ -83,22 +84,78 @@ const BLOCK_TYPES = [
 
 function BlockEditor({ block, onChange, onRemove }) {
   const update = (patch) => onChange({ ...block, ...patch });
+  const areaRef = useRef(null);
+  const [preview, setPreview] = useState(false);
+
+  // Wrap the selection, then put the caret back where the writer expects it.
+  const mark = (wrap) => {
+    const el = areaRef.current;
+    if (!el) return;
+    const next = applyMark(el.value, el.selectionStart, el.selectionEnd, wrap);
+    update({ content: next.value });
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(next.start, next.end);
+    });
+  };
+
+  const onKeyDown = (e) => {
+    if (!(e.metaKey || e.ctrlKey)) return;
+    const key = e.key.toLowerCase();
+    const hit = { b: "**", i: "*", u: "__" }[key];
+    if (!hit) return;
+    e.preventDefault();
+    mark(hit);
+  };
 
   if (block.type === "text" || block.type === "h2" || block.type === "h3") {
-    const Tag = block.type === "text" ? "textarea" : "input";
+    const isText = block.type === "text";
+    const Tag = isText ? "textarea" : "input";
     return (
       <div className={`lf-block lf-block-${block.type}`}>
         <div className="lf-block-toolbar">
           <span className="lf-block-type">{BLOCK_TYPES.find((b) => b.type === block.type)?.icon}</span>
+          {isText && (
+            <div className="lf-marks">
+              {MARKS.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className={`lf-mark lf-mark-${m.id}`}
+                  title={`${m.title}${m.id === "bold" ? " (⌘B)" : m.id === "italic" ? " (⌘I)" : m.id === "underline" ? " (⌘U)" : ""}`}
+                  onClick={() => mark(m.wrap)}
+                  disabled={preview}
+                >
+                  {m.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                className={`lf-mark lf-mark-preview ${preview ? "on" : ""}`}
+                title="Toggle preview"
+                onClick={() => setPreview((p) => !p)}
+              >
+                {preview ? "write" : "preview"}
+              </button>
+            </div>
+          )}
           <button className="lf-block-remove" onClick={onRemove} title="Remove block">✕</button>
         </div>
-        <Tag
-          className={block.type === "text" ? "lf-block-textarea" : "lf-block-heading-input"}
-          value={block.content || ""}
-          onChange={(e) => update({ content: e.target.value })}
-          placeholder={block.type === "text" ? "Write..." : block.type === "h2" ? "Heading" : "Subheading"}
-          rows={block.type === "text" ? 3 : 1}
-        />
+        {isText && preview ? (
+          <div className="lf-md-preview">
+            {block.content ? renderText(block.content, "pv") : <span className="lf-md-preview-empty">Nothing to preview yet.</span>}
+          </div>
+        ) : (
+          <Tag
+            ref={isText ? areaRef : undefined}
+            className={isText ? "lf-block-textarea" : "lf-block-heading-input"}
+            value={block.content || ""}
+            onChange={(e) => update({ content: e.target.value })}
+            onKeyDown={isText ? onKeyDown : undefined}
+            placeholder={isText ? "Write… **bold**, *italic*, __underline__, ==highlight==" : block.type === "h2" ? "Heading" : "Subheading"}
+            rows={isText ? 6 : 1}
+          />
+        )}
       </div>
     );
   }
@@ -416,8 +473,7 @@ function ArticleReader({ article, onBack, onEdit, onDelete, regions = [], settin
         <div className="lf-reader-body">
           {blocks.map((block, i) => {
             if (block.type === "text") {
-              const lines = (block.content || "").split("\n");
-              return <p key={i}>{lines.map((line, li) => <span key={li}>{li > 0 && <br />}{line}</span>)}</p>;
+              return <p key={i}>{renderText(block.content, `r${i}`)}</p>;
             }
             if (block.type === "h2") return <h2 key={i}>{block.content}</h2>;
             if (block.type === "h3") return <h3 key={i}>{block.content}</h3>;

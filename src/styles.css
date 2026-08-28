@@ -2277,6 +2277,56 @@ html.lp-scroll[data-theme="dark"] { background: #121410; }
   width: 100%; aspect-ratio: 16/9; border: none; display: block;
 }
 
+/* ── inline formatting toolbar + markdown preview ── */
+.lf-marks { display: flex; align-items: center; gap: 2px; flex: 1; margin-left: 10px; }
+.lf-mark {
+  min-width: 22px; height: 22px; padding: 0 5px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font); font-size: 0.7rem; line-height: 1;
+  color: #8a8275; background: none; border: none; border-radius: 0;
+  cursor: pointer; transition: color 0.12s, background 0.12s;
+}
+.lf-mark:hover:not(:disabled) { color: #1a1814; background: rgba(0,0,0,0.05); }
+.lf-mark:disabled { opacity: 0.3; cursor: default; }
+.lf-mark-bold { font-weight: 800; }
+.lf-mark-italic { font-style: italic; }
+.lf-mark-underline { text-decoration: underline; text-underline-offset: 2px; }
+.lf-mark-strike { text-decoration: line-through; }
+.lf-mark-mark { background: rgba(224, 192, 96, 0.25); }
+.lf-mark-preview { margin-left: auto; font-size: 0.62rem; letter-spacing: 0.02em; }
+.lf-mark-preview.on { color: #3d8a55; }
+
+.lf-md-preview {
+  min-height: 96px; padding: 8px 0;
+  font-family: var(--serif); font-size: 0.95rem; line-height: 1.7; color: #33302a;
+}
+.lf-md-preview-empty { color: #c5bfb0; font-style: italic; font-size: 0.85rem; }
+
+/* the marks themselves, wherever prose is rendered */
+.lf-md-preview mark, .lf-reader-body mark, .lp-reader-body mark {
+  background: rgba(224, 192, 96, 0.35); color: inherit; padding: 0 2px;
+}
+.lf-md-preview code, .lf-reader-body code, .lp-reader-body code {
+  font-family: var(--font); font-size: 0.88em;
+  background: rgba(0, 0, 0, 0.06); padding: 1px 5px; border-radius: 2px;
+}
+.lf-md-preview u, .lf-reader-body u, .lp-reader-body u { text-underline-offset: 3px; }
+.lf-md-preview a, .lf-reader-body a, .lp-reader-body a {
+  color: inherit; text-decoration: underline; text-underline-offset: 3px;
+  text-decoration-color: currentColor;
+}
+
+[data-theme="dark"] .lf-mark { color: var(--text-muted); }
+[data-theme="dark"] .lf-mark:hover:not(:disabled) { color: var(--text); background: rgba(255,255,255,0.07); }
+[data-theme="dark"] .lf-mark-preview.on { color: var(--accent); }
+[data-theme="dark"] .lf-md-preview { color: var(--text-dim); }
+[data-theme="dark"] .lf-md-preview mark,
+[data-theme="dark"] .lf-reader-body mark,
+[data-theme="dark"] .lp-reader-body mark { background: rgba(224, 192, 96, 0.28); color: #f0e8d0; }
+[data-theme="dark"] .lf-md-preview code,
+[data-theme="dark"] .lf-reader-body code,
+[data-theme="dark"] .lp-reader-body code { background: rgba(255,255,255,0.09); }
+
 .lf-add-block-bar {
   display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; padding-top: 12px;
   border-top: 1px solid #e8e4db;
