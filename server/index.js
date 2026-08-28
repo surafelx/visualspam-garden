@@ -9,6 +9,7 @@ import checkinsRouter from "./routes/checkins.js";
 import essaysRouter from "./routes/essays.js";
 import commentsRouter from "./routes/comments.js";
 import messagesRouter from "./routes/messages.js";
+import Essay from "./models/Essay.js";
 import { addClient, removeClient } from "./lib/broadcast.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -49,12 +50,70 @@ const clientDist = fs.existsSync(path.join(__dirname, "dist"))
   ? path.join(__dirname, "dist")
   : path.join(__dirname, "..", "dist");
 
+const escapeHtml = (str) =>
+  String(str).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
+  );
+
+// Must match slugify() on the client, which is how essay URLs are built.
+const slugify = (text) =>
+  String(text).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+const setMeta = (html, attr, key, value) =>
+  html.replace(
+    new RegExp(`(<meta ${attr}="${key}" content=")[^"]*(")`),
+    `$1${escapeHtml(value)}$2`
+  );
+
+// Crawlers building a link preview do not run the client bundle, so a shared
+// /essay/<slug> would otherwise preview with the generic site title. Fill the
+// tags in server-side before handing over the shell.
+async function pageHtml(reqPath, indexHtml) {
+  const match = reqPath.match(/^\/essay\/([^/]+)\/?$/);
+  if (!match) return indexHtml;
+
+  const slug = decodeURIComponent(match[1]);
+  let essay;
+  try {
+    const essays = await Essay.find({ draft: false })
+      .select("title excerpt body")
+      .lean();
+    essay = essays.find((e) => slugify(e.title) === slug);
+  } catch {
+    return indexHtml;
+  }
+  if (!essay) return indexHtml;
+
+  const title = `${essay.title} · Garden`;
+  const description =
+    (essay.excerpt || essay.body || "").replace(/\s+/g, " ").trim().slice(0, 200) ||
+    "Essays, notes and logs.";
+
+  let html = indexHtml.replace(
+    /<title>[^<]*<\/title>/,
+    `<title>${escapeHtml(title)}</title>`
+  );
+  html = setMeta(html, "name", "description", description);
+  html = setMeta(html, "property", "og:title", title);
+  html = setMeta(html, "property", "og:description", description);
+  html = setMeta(html, "name", "twitter:title", title);
+  html = setMeta(html, "name", "twitter:description", description);
+  return html;
+}
+
 if (serveClient) {
   if (fs.existsSync(path.join(clientDist, "index.html"))) {
+    const indexHtml = fs.readFileSync(path.join(clientDist, "index.html"), "utf8");
     app.use(express.static(clientDist));
     // SPA fallback: /essay/<slug> and friends are client routes, not files, so
     // a direct hit or a refresh has to be answered with index.html.
-    app.get(/^(?!\/api).*/, (req, res) => res.sendFile(path.join(clientDist, "index.html")));
+    app.get(/^(?!\/api).*/, async (req, res, next) => {
+      try {
+        res.type("html").send(await pageHtml(req.path, indexHtml));
+      } catch (err) {
+        next(err);
+      }
+    });
   } else {
     // Without this the server answers 404 for every page, which looks like a
     // routing bug rather than a missing build.
