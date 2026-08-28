@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { articles as seedArticles, threadById, threads, timeAgo, dayKey } from "../data.js";
 import * as api from "../api.js";
 import WritingAnalysis from "./WritingAnalysis.jsx";
@@ -507,7 +507,13 @@ function formatDate(dk) {
 }
 
 export default function Library({ regions = [], settings = {} }) {
-  const { slug } = useParams();
+  // Library renders under the /admin/* wildcard route, so there is no :slug
+  // param to read — useParams() gave {"*": "library/<slug>"} and the reader
+  // never opened. Derive it from the path the way AdminShell does.
+  const { pathname } = useLocation();
+  const slug = decodeURIComponent(
+    pathname.match(/^\/admin\/library\/(.+?)\/?$/)?.[1] ?? ""
+  ) || null;
   const navigate = useNavigate();
   const loadEssays = async () => {
     try {
