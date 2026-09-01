@@ -41,8 +41,12 @@ router.post("/", w(async (req, res) => {
   } catch (err) {
     // the compound index makes saving the same track to a bed twice a no-op
     if (err.code === 11000) {
+      // saving the same link to the same bed twice is a no-op, not an error
       const existing = await Track.findOne({ url: doc.url, regionId: doc.regionId });
-      return res.status(200).json(existing);
+      if (existing) return res.status(200).json(existing);
+      // a collision with no matching row means a stale index is rejecting a
+      // valid write — say so instead of answering with null
+      return res.status(409).json({ error: "conflicted with an existing index" });
     }
     throw err;
   }

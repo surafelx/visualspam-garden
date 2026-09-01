@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="popup.css" />
+    <style>
+      body { width: auto; }
+      .wrap { max-width: 460px; padding: 26px; }
+      .input {
+        width: 100%; font-family: inherit; font-size: 11px; color: var(--ink);
+        background: var(--raise); border: 1px solid var(--line);
+        padding: 8px 9px; margin-bottom: 12px;
+      }
+      .input:focus { outline: none; border-color: var(--accent); }
+      .hint { color: var(--muted); font-size: 10px; line-height: 1.6; margin-bottom: 14px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="head">
+        <span class="mark">🌱</span>
+        <span class="name">garden archive · settings</span>
+      </header>
+
+      <label class="label" for="api">API address</label>
+      <input id="api" class="input" type="url" placeholder="http://localhost:4000/api" />
+      <p class="hint">
+        Where your garden's API lives. Use <code>http://localhost:4000/api</code> while running
+        it locally, or your deployed address with <code>/api</code> on the end. Saving a
+        non-local address will ask Chrome for permission to reach it.
+      </p>
+
+      <button id="save" class="btn">save</button>
+      <p id="status" class="status"></p>
+    </div>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

@@ -11,6 +11,7 @@ import commentsRouter from "./routes/comments.js";
 import messagesRouter from "./routes/messages.js";
 import tracksRouter from "./routes/tracks.js";
 import Essay from "./models/Essay.js";
+import Track from "./models/Track.js";
 import { addClient, removeClient } from "./lib/broadcast.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -133,8 +134,16 @@ app.use((err, req, res, next) => {
 });
 
 mongoose.connect(MONGO_URI)
-  .then(() => {
+  .then(async () => {
     console.log("connected to mongo");
+    // Mongo keeps indexes a schema no longer declares. A renamed unique index
+    // left behind will happily reject valid writes — dropping the videoId one
+    // after the archive moved to url did exactly that.
+    try {
+      await Track.syncIndexes();
+    } catch (err) {
+      console.warn("could not sync Track indexes:", err.message);
+    }
     app.listen(PORT, () => console.log(`api on :${PORT}`));
   })
   .catch((err) => {

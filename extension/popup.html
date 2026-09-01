@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="head">
+        <span class="mark">🌱</span>
+        <span class="name">garden archive</span>
+      </header>
+
+      <div class="page">
+        <span id="kind" class="kind">link</span>
+        <span id="title" class="title">Loading…</span>
+        <span id="url" class="url"></span>
+      </div>
+
+      <label class="label" for="bed">file under</label>
+      <select id="bed" class="select">
+        <option value="none">no bed</option>
+      </select>
+
+      <label class="label" for="note">note</label>
+      <textarea id="note" class="textarea" rows="2" placeholder="why you kept this…"></textarea>
+
+      <button id="save" class="btn">save to archive</button>
+      <p id="status" class="status"></p>
+
+      <a id="options" class="options" href="#">settings</a>
+    </div>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
