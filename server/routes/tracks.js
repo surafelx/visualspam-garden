@@ -17,7 +17,8 @@ router.get("/", w(async (req, res) => {
 router.post("/", w(async (req, res) => {
   const {
     url, kind = "link", videoId = "", title, channel = "", thumbnail = "",
-    regionId = null, plantId = null, fruitId = null, note = "", transcript = "",
+    regionId = null, plantId = null, fruitId = null, categoryId = null,
+    note = "", transcript = "",
   } = req.body || {};
   if (!url || !title) {
     return res.status(400).json({ error: "url and title are required" });
@@ -32,6 +33,7 @@ router.post("/", w(async (req, res) => {
     regionId: regionId || null,
     plantId: plantId || null,
     fruitId: fruitId || null,
+    categoryId: categoryId || null,
     note: String(note).slice(0, 500),
     transcript: String(transcript).slice(0, 100000),
   };
@@ -53,7 +55,7 @@ router.post("/", w(async (req, res) => {
 }));
 
 router.put("/:id", w(async (req, res) => {
-  const { regionId, plantId, fruitId, note, transcript } = req.body || {};
+  const { regionId, plantId, fruitId, categoryId, note, transcript } = req.body || {};
   const patch = {};
   if (regionId !== undefined) {
     patch.regionId = regionId || null;
@@ -63,6 +65,7 @@ router.put("/:id", w(async (req, res) => {
     patch.fruitId = null;
   }
   if (plantId !== undefined) patch.plantId = plantId || null;
+  if (categoryId !== undefined) patch.categoryId = categoryId || null;
   if (fruitId !== undefined) patch.fruitId = fruitId || null;
   if (note !== undefined) patch.note = String(note).slice(0, 500);
   if (transcript !== undefined) patch.transcript = String(transcript).slice(0, 100000);

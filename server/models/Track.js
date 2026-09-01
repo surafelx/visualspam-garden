@@ -11,6 +11,8 @@ const trackSchema = new mongoose.Schema({
   channel: { type: String, default: "" },
   thumbnail: { type: String, default: "" },
   regionId: { type: String, default: null, index: true },
+  // your own filing, independent of the garden's beds
+  categoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Category", default: null, index: true },
   // an entry can hang off a specific fruit inside a bed, not just the bed
   plantId: { type: String, default: null },
   fruitId: { type: String, default: null },

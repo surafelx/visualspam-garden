@@ -50,6 +50,12 @@ export const createTrack = (data) => request("/tracks", { method: "POST", body: 
 export const updateTrack = (id, data) => request(`/tracks/${id}`, { method: "PUT", body: data });
 export const deleteTrack = (id) => request(`/tracks/${id}`, { method: "DELETE" });
 
+// ── Categories (your own filing for the archive) ──
+export const fetchCategories = () => request("/categories");
+export const createCategory = (data) => request("/categories", { method: "POST", body: data });
+export const updateCategory = (id, data) => request(`/categories/${id}`, { method: "PUT", body: data });
+export const deleteCategory = (id) => request(`/categories/${id}`, { method: "DELETE" });
+
 // ── Subscriptions (feeds you follow) ──
 export const fetchSubs = () => request("/subs");
 export const createSub = (data) => request("/subs", { method: "POST", body: data });

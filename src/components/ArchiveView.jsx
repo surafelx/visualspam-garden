@@ -64,7 +64,7 @@ function linksInEssays(essays) {
   return out.filter((l) => (seen.has(l.url) ? false : seen.add(l.url)));
 }
 
-function EntryRow({ entry, regions, playing, onTogglePlay, open, onToggleDetails, onPatch, onRemove }) {
+function EntryRow({ entry, regions, categories, playing, onTogglePlay, open, onToggleDetails, onPatch, onRemove }) {
   const [note, setNote] = useState(entry.note || "");
   const [transcript, setTranscript] = useState(entry.transcript || "");
   const [title, setTitle] = useState(entry.title || "");
@@ -78,7 +78,12 @@ function EntryRow({ entry, regions, playing, onTogglePlay, open, onToggleDetails
   const plant = plants.find((p) => p.id === entry.plantId) || null;
   const fruits = plant?.fruits || [];
   const fruit = fruits.find((f) => f.id === entry.fruitId) || null;
-  const where = [region?.label, plant?.name, fruit?.title].filter(Boolean).join(" → ");
+  const category = categories.find((c) => String(c._id) === String(entry.categoryId)) || null;
+  const parentCat = category?.parentId
+    ? categories.find((c) => String(c._id) === String(category.parentId))
+    : null;
+  const catPath = [parentCat?.name, category?.name].filter(Boolean).join(" / ");
+  const where = [catPath, region?.label, plant?.name, fruit?.title].filter(Boolean).join(" → ");
   const playable = entry.kind === "video" || entry.kind === "audio";
 
   return (
@@ -143,6 +148,31 @@ function EntryRow({ entry, regions, playing, onTogglePlay, open, onToggleDetails
           />
 
           <div className="arc-detail-rows">
+            <div className="arc-detail-row">
+              <label className="arc-label">category</label>
+              <select
+                className="arc-select"
+                value={entry.categoryId || "none"}
+                onChange={(e) => onPatch({ categoryId: e.target.value })}
+              >
+                <option value="none">uncategorised</option>
+                {categories
+                  .filter((c) => !c.parentId)
+                  .map((parent) => (
+                    <optgroup key={parent._id} label={parent.name}>
+                      <option value={parent._id}>{parent.name}</option>
+                      {categories
+                        .filter((c) => String(c.parentId) === String(parent._id))
+                        .map((child) => (
+                          <option key={child._id} value={child._id}>
+                            &nbsp;&nbsp;{child.name}
+                          </option>
+                        ))}
+                    </optgroup>
+                  ))}
+              </select>
+            </div>
+
             <div className="arc-detail-row">
               <label className="arc-label">bed</label>
               <select
@@ -247,11 +277,50 @@ export default function ArchiveView({ regions = [], settings = {} }) {
   const [playing, setPlaying] = useState(null);
   const [details, setDetails] = useState(null);
   const [showFound, setShowFound] = useState(false);
+  const [cats, setCats] = useState([]);
+  const [cat, setCat] = useState("all");
+  const [manageCats, setManageCats] = useState(false);
+  const [newCat, setNewCat] = useState("");
+  const [newCatParent, setNewCatParent] = useState("none");
+  const [catError, setCatError] = useState("");
 
   const load = useCallback(() => {
     api.fetchTracks().then(setEntries).catch(() => setEntries([]));
   }, []);
   useEffect(load, [load]);
+
+  const loadCats = useCallback(() => {
+    api.fetchCategories().then(setCats).catch(() => setCats([]));
+  }, []);
+  useEffect(loadCats, [loadCats]);
+
+  const addCategory = async (e) => {
+    e.preventDefault();
+    if (!newCat.trim()) return;
+    setCatError("");
+    try {
+      await api.createCategory({
+        name: newCat.trim(),
+        parentId: newCatParent === "none" ? null : newCatParent,
+      });
+      setNewCat("");
+      loadCats();
+    } catch (err) {
+      setCatError(err.message || "could not create that.");
+    }
+  };
+
+  const removeCategory = async (c) => {
+    const kids = cats.filter((x) => String(x.parentId) === String(c._id));
+    const warning = kids.length
+      ? `Delete "${c.name}" and its ${kids.length} subcategor${kids.length === 1 ? "y" : "ies"}? Archived items keep, they just lose the label.`
+      : `Delete "${c.name}"? Archived items keep, they just lose the label.`;
+    if (!window.confirm(warning)) return;
+    await api.deleteCategory(c._id).catch(() => {});
+    if (cat === c._id || kids.some((k) => k._id === cat)) setCat("all");
+    loadCats();
+    load();
+  };
 
   useEffect(() => {
     api.fetchEssays()
@@ -343,6 +412,7 @@ export default function ArchiveView({ regions = [], settings = {} }) {
 
   const patch = async (id, p) => {
     if (p.regionId !== undefined) p.regionId = p.regionId === "none" ? null : p.regionId;
+    if (p.categoryId !== undefined) p.categoryId = p.categoryId === "none" ? null : p.categoryId;
     await api.updateTrack(id, p).catch(() => setError("Could not save that change."));
     load();
   };
@@ -352,10 +422,17 @@ export default function ArchiveView({ regions = [], settings = {} }) {
     load();
   };
 
-  const shown = useMemo(
-    () => (kind === "all" ? entries : entries.filter((e) => e.kind === kind)),
-    [entries, kind]
-  );
+  const shown = useMemo(() => {
+    let list = kind === "all" ? entries : entries.filter((e) => e.kind === kind);
+    if (cat === "none") list = list.filter((e) => !e.categoryId);
+    else if (cat !== "all") {
+      // picking a parent shows everything filed under it, subcategories included
+      const kids = cats.filter((c) => String(c.parentId) === String(cat)).map((c) => String(c._id));
+      const wanted = new Set([String(cat), ...kids]);
+      list = list.filter((e) => e.categoryId && wanted.has(String(e.categoryId)));
+    }
+    return list;
+  }, [entries, kind, cat, cats]);
 
   const grouped = useMemo(() => {
     const byBed = new Map();
@@ -396,6 +473,96 @@ export default function ArchiveView({ regions = [], settings = {} }) {
           ))}
         </nav>
       </header>
+
+      <div className="arc-cats">
+        <div className="arc-cat-row">
+          <button
+            className={`arc-kind ${cat === "all" ? "on" : ""}`}
+            onClick={() => setCat("all")}
+          >
+            all categories
+          </button>
+          {cats.filter((c) => !c.parentId).map((parent) => {
+            const kids = cats.filter((c) => String(c.parentId) === String(parent._id));
+            const total = parent.count + kids.reduce((n, k) => n + k.count, 0);
+            return (
+              <span key={parent._id} className="arc-cat-group">
+                <button
+                  className={`arc-kind ${cat === parent._id ? "on" : ""}`}
+                  onClick={() => setCat(parent._id)}
+                >
+                  {parent.name}
+                  <span className="arc-count">{total}</span>
+                </button>
+                {kids.map((kid) => (
+                  <button
+                    key={kid._id}
+                    className={`arc-kind arc-kind-sub ${cat === kid._id ? "on" : ""}`}
+                    onClick={() => setCat(kid._id)}
+                  >
+                    {kid.name}
+                    <span className="arc-count">{kid.count}</span>
+                  </button>
+                ))}
+              </span>
+            );
+          })}
+          <button
+            className={`arc-kind ${cat === "none" ? "on" : ""}`}
+            onClick={() => setCat("none")}
+          >
+            uncategorised
+          </button>
+          <button className="arc-cat-manage" onClick={() => setManageCats((v) => !v)}>
+            {manageCats ? "done" : "edit categories"}
+          </button>
+        </div>
+
+        {manageCats && (
+          <div className="arc-cat-panel">
+            <form className="arc-row" onSubmit={addCategory}>
+              <select
+                className="arc-select"
+                value={newCatParent}
+                onChange={(e) => setNewCatParent(e.target.value)}
+              >
+                <option value="none">new category</option>
+                {cats.filter((c) => !c.parentId).map((c) => (
+                  <option key={c._id} value={c._id}>under {c.name}</option>
+                ))}
+              </select>
+              <input
+                className="arc-input"
+                value={newCat}
+                onChange={(e) => setNewCat(e.target.value)}
+                placeholder={newCatParent === "none" ? "category name" : "subcategory name"}
+              />
+              <button className="arc-btn" type="submit" disabled={!newCat.trim()}>create</button>
+            </form>
+            {catError && <p className="arc-error">{catError}</p>}
+
+            <ul className="arc-cat-list">
+              {cats.filter((c) => !c.parentId).map((parent) => (
+                <li key={parent._id} className="arc-cat-item">
+                  <span className="arc-cat-name">{parent.name}</span>
+                  <span className="arc-count">{parent.count}</span>
+                  <button className="arc-remove" onClick={() => removeCategory(parent)} title="Delete">✕</button>
+                  <ul className="arc-cat-sublist">
+                    {cats.filter((c) => String(c.parentId) === String(parent._id)).map((kid) => (
+                      <li key={kid._id} className="arc-cat-item">
+                        <span className="arc-cat-name">{kid.name}</span>
+                        <span className="arc-count">{kid.count}</span>
+                        <button className="arc-remove" onClick={() => removeCategory(kid)} title="Delete">✕</button>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+              {cats.length === 0 && <li className="arc-empty">no categories yet.</li>}
+            </ul>
+          </div>
+        )}
+      </div>
 
       <div className="arc-add">
         <div className="arc-bedpick">
@@ -490,6 +657,7 @@ export default function ArchiveView({ regions = [], settings = {} }) {
                   key={t._id}
                   entry={t}
                   regions={regions}
+                  categories={cats}
                   playing={playing === t._id}
                   onTogglePlay={() => setPlaying(playing === t._id ? null : t._id)}
                   open={details === t._id}

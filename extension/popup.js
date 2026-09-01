@@ -1,4 +1,4 @@
-import { fetchBeds, saveLink, kindOf, getConfig } from "./lib/garden.js";
+import { fetchBeds, fetchCategories, saveLink, kindOf, getConfig } from "./lib/garden.js";
 
 const $ = (id) => document.getElementById(id);
 const status = (msg, cls = "") => {
@@ -27,7 +27,36 @@ async function init() {
   }
 
   // remember the last bed used, so saving a run of things is one click each
-  const { lastBed } = await chrome.storage.sync.get({ lastBed: "none" });
+  const { lastBed, lastCategory } = await chrome.storage.sync.get({
+    lastBed: "none",
+    lastCategory: "none",
+  });
+
+  try {
+    const cats = await fetchCategories();
+    // parents carry their children beneath them, indented
+    cats.filter((c) => !c.parentId).forEach((parent) => {
+      const group = document.createElement("optgroup");
+      group.label = parent.name;
+      const own = document.createElement("option");
+      own.value = parent._id;
+      own.textContent = parent.name;
+      group.appendChild(own);
+      cats
+        .filter((c) => String(c.parentId) === String(parent._id))
+        .forEach((kid) => {
+          const opt = document.createElement("option");
+          opt.value = kid._id;
+          opt.textContent = `  ${kid.name}`;
+          group.appendChild(opt);
+        });
+      $("category").appendChild(group);
+    });
+    $("category").value = cats.some((c) => c._id === lastCategory) ? lastCategory : "none";
+  } catch {
+    /* categories are optional — a save without one still works */
+  }
+
   try {
     const beds = await fetchBeds();
     for (const b of beds) {
@@ -48,13 +77,15 @@ $("save").addEventListener("click", async () => {
   $("save").disabled = true;
   status("Saving…");
   try {
+    const category = $("category").value;
     await saveLink({
       url: tab.url,
       title: tab.title,
       regionId: bed === "none" ? null : bed,
+      categoryId: category === "none" ? null : category,
       note: $("note").value.trim(),
     });
-    await chrome.storage.sync.set({ lastBed: bed });
+    await chrome.storage.sync.set({ lastBed: bed, lastCategory: category });
     status("Kept in your archive.", "ok");
     setTimeout(() => window.close(), 900);
   } catch (err) {

@@ -48,8 +48,16 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
   try {
     // saves to whichever bed the popup last used, so the two agree
-    const { lastBed } = await chrome.storage.sync.get({ lastBed: "none" });
-    await saveLink({ url, title, regionId: lastBed === "none" ? null : lastBed });
+    const { lastBed, lastCategory } = await chrome.storage.sync.get({
+      lastBed: "none",
+      lastCategory: "none",
+    });
+    await saveLink({
+      url,
+      title,
+      regionId: lastBed === "none" ? null : lastBed,
+      categoryId: lastCategory === "none" ? null : lastCategory,
+    });
     await flash("✓", "#4c9a63");
   } catch {
     await flash("!", "#b05040");

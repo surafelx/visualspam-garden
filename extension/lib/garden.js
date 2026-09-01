@@ -53,6 +53,13 @@ async function youtubeMeta(videoId) {
   }
 }
 
+export async function fetchCategories() {
+  const { apiBase } = await getConfig();
+  const res = await fetch(`${apiBase}/categories`);
+  if (!res.ok) throw new Error(`categories: ${res.status}`);
+  return res.json();
+}
+
 export async function fetchBeds() {
   const { apiBase } = await getConfig();
   const res = await fetch(`${apiBase}/regions`);
@@ -61,7 +68,7 @@ export async function fetchBeds() {
 }
 
 /* Builds the archive entry and posts it. Returns the saved entry. */
-export async function saveLink({ url, title, regionId = null, note = "" }) {
+export async function saveLink({ url, title, regionId = null, categoryId = null, note = "" }) {
   const { apiBase } = await getConfig();
   const videoId = youtubeIdFrom(url) || "";
   let finalTitle = (title || "").trim();
@@ -93,6 +100,7 @@ export async function saveLink({ url, title, regionId = null, note = "" }) {
       channel,
       thumbnail: videoId ? thumbFor(videoId) : "",
       regionId: regionId || null,
+      categoryId: categoryId || null,
       note,
     }),
   });
