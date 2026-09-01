@@ -17,6 +17,7 @@ import RoadmapView from "./components/RoadmapView.jsx";
 import LoginGate from "./components/LoginGate.jsx";
 import PublicPage from "./components/PublicPage.jsx";
 import GardenAnalysis from "./components/GardenAnalysis.jsx";
+import ToolsView from "./components/ToolsView.jsx";
 
 function slugify(text) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -27,13 +28,15 @@ async function getSettings() {
     const raw = JSON.parse(localStorage.getItem("vsg_settings")) || {};
     const apiKey = raw.encApiKey ? await decryptText(raw.encApiKey) : (raw.apiKey || "");
     const model = raw.encModel ? await decryptText(raw.encModel) : (raw.model || "");
-    return { apiKey, model };
-  } catch { return { apiKey: "", model: "" }; }
+    const ytKey = raw.encYtKey ? await decryptText(raw.encYtKey) : (raw.ytKey || "");
+    return { apiKey, model, ytKey };
+  } catch { return { apiKey: "", model: "", ytKey: "" }; }
 }
 async function saveSettings(s) {
   const encApiKey = s.apiKey ? await encryptText(s.apiKey) : "";
   const encModel = s.model ? await encryptText(s.model) : "";
-  localStorage.setItem("vsg_settings", JSON.stringify({ encApiKey, encModel }));
+  const encYtKey = s.ytKey ? await encryptText(s.ytKey) : "";
+  localStorage.setItem("vsg_settings", JSON.stringify({ encApiKey, encModel, encYtKey }));
 }
 
 const aiAnalyze = async (regions, settings) => {
@@ -96,7 +99,9 @@ function AdminShell({ regions, setRegions, settings, showSettings, setShowSettin
   const isPlan = path === "/admin/plan";
   const isRoadmap = path === "/admin/roadmap";
   const isLibrary = path.startsWith("/admin/library");
-  const currentView = isGarden ? "garden" : bedMatch ? "bed" : isPlan ? "plan" : isRoadmap ? "roadmap" : "library";
+  const isTools = path.startsWith("/admin/tools");
+  const currentView = isGarden ? "garden" : bedMatch ? "bed" : isPlan ? "plan"
+    : isRoadmap ? "roadmap" : isTools ? "tools" : "library";
 
   const viewBedDetail = (id) => { navigate(`/admin/bed/${id}`); };
   const navigateToArticle = useCallback((article) => {
@@ -249,6 +254,7 @@ function AdminShell({ regions, setRegions, settings, showSettings, setShowSettin
     { id: "plan", icon: "📋", label: "Plan", path: "/admin/plan" },
     { id: "roadmap", icon: "🎯", label: "Roadmap", path: "/admin/roadmap" },
     { id: "library", icon: "📖", label: "Library", path: "/admin/library" },
+    { id: "tools", icon: "🧰", label: "Tools", path: "/admin/tools" },
   ];
   const thirsty = regions.filter((r) => (Date.now() - new Date(r.lastTs).getTime()) / 864e5 >= 4).length;
   const recent = regions
@@ -302,7 +308,8 @@ function AdminShell({ regions, setRegions, settings, showSettings, setShowSettin
         )}
         {isPlan && <PlanView regions={regions} onGrow={grow} />}
         {isRoadmap && <RoadmapView regions={regions} onSelectBed={viewBedDetail} />}
-        {isLibrary && !bedMatch && (
+        {isTools && <ToolsView regions={regions} settings={settings} />}
+        {!isTools && isLibrary && !bedMatch && (
           <Library regions={regions} settings={settings} />
         )}
       </main>
@@ -571,6 +578,19 @@ function AdminShell({ regions, setRegions, settings, showSettings, setShowSettin
                 value={settings.apiKey || ""}
                 onChange={async (e) => {
                   const s = { ...settings, apiKey: e.target.value };
+                  setSettings(s); await saveSettings(s);
+                }}
+              />
+            </div>
+            <div className="ms-field">
+              <label className="ms-label">YouTube Data API Key</label>
+              <input
+                type="password"
+                className="ms-input"
+                placeholder="AIza… — for searching music in Tools"
+                value={settings.ytKey || ""}
+                onChange={async (e) => {
+                  const s = { ...settings, ytKey: e.target.value };
                   setSettings(s); await saveSettings(s);
                 }}
               />

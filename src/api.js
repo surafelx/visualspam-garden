@@ -43,6 +43,13 @@ export const fetchMessages = () => request("/messages");
 export const createMessage = (data) => request("/messages", { method: "POST", body: data });
 export const markMessageRead = (id) => request(`/messages/${id}`, { method: "PUT", body: { read: true } });
 
+// ── Tracks (saved YouTube references) ──
+export const fetchTracks = (regionId) =>
+  request(`/tracks${regionId ? `?regionId=${encodeURIComponent(regionId)}` : ""}`);
+export const createTrack = (data) => request("/tracks", { method: "POST", body: data });
+export const updateTrack = (id, data) => request(`/tracks/${id}`, { method: "PUT", body: data });
+export const deleteTrack = (id) => request(`/tracks/${id}`, { method: "DELETE" });
+
 // ── Local Garden Analysis (no API needed) ──
 export function analyzeAll(regions) {
   if (!regions || !regions.length) return null;
