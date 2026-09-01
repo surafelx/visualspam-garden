@@ -1,16 +1,24 @@
 import mongoose from "mongoose";
 
-/* A saved reference to a YouTube video — never the audio itself. Playback
-   happens through YouTube's embed, so nothing here is a copy of the work. */
+/* An archived reference to something on the web — a link, never a copy of the
+   thing itself. YouTube entries keep a videoId so they can play through
+   YouTube's own embed. */
 const trackSchema = new mongoose.Schema({
-  videoId: { type: String, required: true },
+  url: { type: String, required: true },
+  kind: { type: String, enum: ["video", "audio", "image", "link"], default: "link" },
+  videoId: { type: String, default: "" },
   title: { type: String, required: true },
   channel: { type: String, default: "" },
   thumbnail: { type: String, default: "" },
   regionId: { type: String, default: null, index: true },
+  // an entry can hang off a specific fruit inside a bed, not just the bed
+  plantId: { type: String, default: null },
+  fruitId: { type: String, default: null },
   note: { type: String, default: "" },
+  transcript: { type: String, default: "" },
 }, { timestamps: true });
 
-trackSchema.index({ regionId: 1, videoId: 1 }, { unique: true });
+// the same link can sit in two different beds, but not twice in one
+trackSchema.index({ regionId: 1, url: 1 }, { unique: true });
 
 export default mongoose.model("Track", trackSchema);

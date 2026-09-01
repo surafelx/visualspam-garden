@@ -17,7 +17,7 @@ import RoadmapView from "./components/RoadmapView.jsx";
 import LoginGate from "./components/LoginGate.jsx";
 import PublicPage from "./components/PublicPage.jsx";
 import GardenAnalysis from "./components/GardenAnalysis.jsx";
-import ToolsView from "./components/ToolsView.jsx";
+import ArchiveView from "./components/ArchiveView.jsx";
 
 function slugify(text) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -99,9 +99,9 @@ function AdminShell({ regions, setRegions, settings, showSettings, setShowSettin
   const isPlan = path === "/admin/plan";
   const isRoadmap = path === "/admin/roadmap";
   const isLibrary = path.startsWith("/admin/library");
-  const isTools = path.startsWith("/admin/tools");
+  const isArchive = path.startsWith("/admin/archive");
   const currentView = isGarden ? "garden" : bedMatch ? "bed" : isPlan ? "plan"
-    : isRoadmap ? "roadmap" : isTools ? "tools" : "library";
+    : isRoadmap ? "roadmap" : isArchive ? "archive" : "library";
 
   const viewBedDetail = (id) => { navigate(`/admin/bed/${id}`); };
   const navigateToArticle = useCallback((article) => {
@@ -254,7 +254,7 @@ function AdminShell({ regions, setRegions, settings, showSettings, setShowSettin
     { id: "plan", icon: "📋", label: "Plan", path: "/admin/plan" },
     { id: "roadmap", icon: "🎯", label: "Roadmap", path: "/admin/roadmap" },
     { id: "library", icon: "📖", label: "Library", path: "/admin/library" },
-    { id: "tools", icon: "🧰", label: "Tools", path: "/admin/tools" },
+    { id: "archive", icon: "🗄️", label: "Archive", path: "/admin/archive" },
   ];
   const thirsty = regions.filter((r) => (Date.now() - new Date(r.lastTs).getTime()) / 864e5 >= 4).length;
   const recent = regions
@@ -308,8 +308,8 @@ function AdminShell({ regions, setRegions, settings, showSettings, setShowSettin
         )}
         {isPlan && <PlanView regions={regions} onGrow={grow} />}
         {isRoadmap && <RoadmapView regions={regions} onSelectBed={viewBedDetail} />}
-        {isTools && <ToolsView regions={regions} settings={settings} />}
-        {!isTools && isLibrary && !bedMatch && (
+        {isArchive && <ArchiveView regions={regions} settings={settings} />}
+        {!isArchive && isLibrary && !bedMatch && (
           <Library regions={regions} settings={settings} />
         )}
       </main>
