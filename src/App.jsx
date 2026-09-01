@@ -312,7 +312,7 @@ function AdminShell({ regions, setRegions, settings, showSettings, setShowSettin
         {isPlan && <PlanView regions={regions} onGrow={grow} />}
         {isRoadmap && <RoadmapView regions={regions} onSelectBed={viewBedDetail} />}
         {isArchive && <ArchiveView regions={regions} settings={settings} />}
-        {isFeed && <FeedView regions={regions} onOpenBed={viewBedDetail} />}
+        {isFeed && <FeedView regions={regions} settings={settings} onOpenBed={viewBedDetail} />}
         {!isArchive && !isFeed && isLibrary && !bedMatch && (
           <Library regions={regions} settings={settings} />
         )}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { threadById } from "../data.js";
 import * as api from "../api.js";
+import { triageItems, MAX_ITEMS } from "../lib/aiTriage.js";
 
 const ICON = {
   water: "💧",
@@ -137,7 +138,7 @@ function buildFeed(regions, essays, archive, subItems) {
   return items.sort((a, b) => b.at - a.at);
 }
 
-export default function FeedView({ regions = [], onOpenBed }) {
+export default function FeedView({ regions = [], settings = {}, onOpenBed }) {
   const [essays, setEssays] = useState([]);
   const [archive, setArchive] = useState([]);
   const [subItems, setSubItems] = useState([]);
@@ -149,6 +150,12 @@ export default function FeedView({ regions = [], onOpenBed }) {
   const [subTopics, setSubTopics] = useState("");
   const [subBusy, setSubBusy] = useState(false);
   const [subError, setSubError] = useState("");
+  // id -> { keep, bedId, why } from the model
+  const [picks, setPicks] = useState(new Map());
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const [hideNoise, setHideNoise] = useState(false);
+  const [filed, setFiled] = useState(new Set());
 
   const loadSubs = () => {
     api.fetchSubs().then(setSubs).catch(() => setSubs([]));
@@ -191,6 +198,47 @@ export default function FeedView({ regions = [], onOpenBed }) {
     loadSubs();
   };
 
+  const sortWithAi = async (candidates) => {
+    setAiBusy(true);
+    setAiError("");
+    try {
+      const result = await triageItems({
+        items: candidates.map((c) => ({ title: c.text, excerpt: c.excerpt, source: c.where })),
+        beds: regions.map((r) => ({ id: r.id, label: r.label })),
+        settings,
+      });
+      // the model answers by position; map it back onto the items
+      const next = new Map(picks);
+      result.forEach((verdict, i) => {
+        const item = candidates[i];
+        if (item) next.set(item.id, verdict);
+      });
+      setPicks(next);
+    } catch (err) {
+      setAiError(err.message || "Could not sort those.");
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  /* Keep an item in the archive, filed where the model suggested. */
+  const fileItem = async (item, bedId) => {
+    try {
+      await api.createTrack({
+        url: item.url,
+        kind: "link",
+        title: item.text,
+        channel: item.where,
+        regionId: bedId || null,
+        note: picks.get(item.id)?.why || "",
+      });
+      setFiled((prev) => new Set(prev).add(item.id));
+      api.fetchTracks().then(setArchive).catch(() => {});
+    } catch {
+      setAiError("Could not file that.");
+    }
+  };
+
   const all = useMemo(
     () => buildFeed(regions, essays, archive, subItems),
     [regions, essays, archive, subItems]
@@ -206,8 +254,13 @@ export default function FeedView({ regions = [], onOpenBed }) {
 
   const shown = useMemo(() => {
     const cutoff = Date.now() - days * 864e5;
-    return all.filter((i) => i.at.getTime() >= cutoff && matchesFilter(i, filter));
-  }, [all, filter, days]);
+    return all.filter((i) => {
+      if (i.at.getTime() < cutoff || !matchesFilter(i, filter)) return false;
+      if (!hideNoise) return true;
+      const pick = picks.get(i.id);
+      return !pick || pick.keep;
+    });
+  }, [all, filter, days, hideNoise, picks]);
 
   // group the stream into days so it reads like a journal
   const grouped = useMemo(() => {
@@ -298,6 +351,31 @@ export default function FeedView({ regions = [], onOpenBed }) {
         )}
       </div>
 
+      <div className="fd-ai">
+        <button
+          className="fd-btn"
+          disabled={aiBusy || shown.filter((i) => i.kind === "sub").length === 0}
+          onClick={() => sortWithAi(shown.filter((i) => i.kind === "sub").slice(0, MAX_ITEMS))}
+          title={`Reads up to ${MAX_ITEMS} incoming items and suggests a bed for each`}
+        >
+          {aiBusy ? "reading…" : "sort with ai"}
+        </button>
+        {picks.size > 0 && (
+          <button
+            className={`fd-range-btn ${hideNoise ? "on" : ""}`}
+            onClick={() => setHideNoise((v) => !v)}
+          >
+            hide what it skipped
+          </button>
+        )}
+        {picks.size > 0 && (
+          <button className="fd-range-btn" onClick={() => { setPicks(new Map()); setHideNoise(false); }}>
+            clear picks
+          </button>
+        )}
+        {aiError && <span className="fd-error">{aiError}</span>}
+      </div>
+
       <div className="fd-range">
         {[7, 30, 90, 3650].map((d) => (
           <button
@@ -328,6 +406,38 @@ export default function FeedView({ regions = [], onOpenBed }) {
                 <span className="fd-body">
                   <span className="fd-text">{item.text}</span>
                   {item.excerpt && <span className="fd-excerpt">{item.excerpt}</span>}
+                  {picks.has(item.id) && (() => {
+                    const pick = picks.get(item.id);
+                    const bed = regions.find((r) => r.id === pick.bedId);
+                    return (
+                      <span className={`fd-pick ${pick.keep ? "" : "skip"}`}>
+                        {pick.keep ? (
+                          <>
+                            {bed ? (
+                              <span className="fd-pick-bed">
+                                <span className="fd-dot" style={{ background: threadById[bed.thread]?.color }} />
+                                {bed.label}
+                              </span>
+                            ) : (
+                              <span className="fd-pick-bed">no bed fits</span>
+                            )}
+                            {pick.why && <span className="fd-pick-why">{pick.why}</span>}
+                            {item.url && (
+                              filed.has(item.id) ? (
+                                <span className="fd-pick-done">kept</span>
+                              ) : (
+                                <button className="fd-pick-keep" onClick={() => fileItem(item, pick.bedId)}>
+                                  keep{bed ? ` in ${bed.label}` : ""}
+                                </button>
+                              )
+                            )}
+                          </>
+                        ) : (
+                          <span className="fd-pick-why">skipped{pick.why ? ` · ${pick.why}` : ""}</span>
+                        )}
+                      </span>
+                    );
+                  })()}
                   <span className="fd-meta">
                     {item.colour && <span className="fd-dot" style={{ background: item.colour }} />}
                     {item.where}
