@@ -10,6 +10,7 @@ import essaysRouter from "./routes/essays.js";
 import commentsRouter from "./routes/comments.js";
 import messagesRouter from "./routes/messages.js";
 import tracksRouter from "./routes/tracks.js";
+import subsRouter from "./routes/subs.js";
 import Essay from "./models/Essay.js";
 import Track from "./models/Track.js";
 import { addClient, removeClient } from "./lib/broadcast.js";
@@ -28,6 +29,7 @@ app.use("/api/essays", essaysRouter);
 app.use("/api/comments", commentsRouter);
 app.use("/api/messages", messagesRouter);
 app.use("/api/tracks", tracksRouter);
+app.use("/api/subs", subsRouter);
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 
 // ── SSE live sync ──

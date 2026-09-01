@@ -50,6 +50,13 @@ export const createTrack = (data) => request("/tracks", { method: "POST", body: 
 export const updateTrack = (id, data) => request(`/tracks/${id}`, { method: "PUT", body: data });
 export const deleteTrack = (id) => request(`/tracks/${id}`, { method: "DELETE" });
 
+// ── Subscriptions (feeds you follow) ──
+export const fetchSubs = () => request("/subs");
+export const createSub = (data) => request("/subs", { method: "POST", body: data });
+export const updateSub = (id, data) => request(`/subs/${id}`, { method: "PUT", body: data });
+export const deleteSub = (id) => request(`/subs/${id}`, { method: "DELETE" });
+export const fetchSubItems = (refresh) => request(`/subs/items${refresh ? "?refresh=1" : ""}`);
+
 // ── Local Garden Analysis (no API needed) ──
 export function analyzeAll(regions) {
   if (!regions || !regions.length) return null;

@@ -18,6 +18,7 @@ import LoginGate from "./components/LoginGate.jsx";
 import PublicPage from "./components/PublicPage.jsx";
 import GardenAnalysis from "./components/GardenAnalysis.jsx";
 import ArchiveView from "./components/ArchiveView.jsx";
+import FeedView from "./components/FeedView.jsx";
 
 function slugify(text) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -100,8 +101,9 @@ function AdminShell({ regions, setRegions, settings, showSettings, setShowSettin
   const isRoadmap = path === "/admin/roadmap";
   const isLibrary = path.startsWith("/admin/library");
   const isArchive = path.startsWith("/admin/archive");
+  const isFeed = path.startsWith("/admin/feed");
   const currentView = isGarden ? "garden" : bedMatch ? "bed" : isPlan ? "plan"
-    : isRoadmap ? "roadmap" : isArchive ? "archive" : "library";
+    : isRoadmap ? "roadmap" : isArchive ? "archive" : isFeed ? "feed" : "library";
 
   const viewBedDetail = (id) => { navigate(`/admin/bed/${id}`); };
   const navigateToArticle = useCallback((article) => {
@@ -254,6 +256,7 @@ function AdminShell({ regions, setRegions, settings, showSettings, setShowSettin
     { id: "plan", icon: "📋", label: "Plan", path: "/admin/plan" },
     { id: "roadmap", icon: "🎯", label: "Roadmap", path: "/admin/roadmap" },
     { id: "library", icon: "📖", label: "Library", path: "/admin/library" },
+    { id: "feed", icon: "〰️", label: "Feed", path: "/admin/feed" },
     { id: "archive", icon: "🗄️", label: "Archive", path: "/admin/archive" },
   ];
   const thirsty = regions.filter((r) => (Date.now() - new Date(r.lastTs).getTime()) / 864e5 >= 4).length;
@@ -309,7 +312,8 @@ function AdminShell({ regions, setRegions, settings, showSettings, setShowSettin
         {isPlan && <PlanView regions={regions} onGrow={grow} />}
         {isRoadmap && <RoadmapView regions={regions} onSelectBed={viewBedDetail} />}
         {isArchive && <ArchiveView regions={regions} settings={settings} />}
-        {!isArchive && isLibrary && !bedMatch && (
+        {isFeed && <FeedView regions={regions} onOpenBed={viewBedDetail} />}
+        {!isArchive && !isFeed && isLibrary && !bedMatch && (
           <Library regions={regions} settings={settings} />
         )}
       </main>
